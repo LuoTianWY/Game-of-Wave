@@ -1,0 +1,4 @@
+repository "gay@tj_luo_tian_wy@cloud.cn"
+  path "/"
+    br "/main"
+    co "/main"
