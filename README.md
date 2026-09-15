@@ -1,4 +1,4 @@
-# 波形小队 · Waveform Team（Game-of-Wave）
+# 神秘少女乐队（？） · Band Another Sky
 
 > 2D 像素风 · 模拟经营 + 音乐创作 · 核心设定：**波形即人格**
 >
