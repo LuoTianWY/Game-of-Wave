@@ -6,9 +6,9 @@ namespace WaveTeam.Core
     public sealed class PlayedNote
     {
         public readonly Tile Tile;
-        public readonly int Onset; // 起始拍（从 0 起）
+        public readonly float Onset; // 起始拍（从 0 起）
 
-        public PlayedNote(Tile tile, int onset)
+        public PlayedNote(Tile tile, float onset)
         {
             Tile = tile;
             Onset = onset;
@@ -21,7 +21,7 @@ namespace WaveTeam.Core
         public static List<PlayedNote> Flatten(IEnumerable<Character> chain)
         {
             var notes = new List<PlayedNote>();
-            int beat = 0;
+            float beat = 0f;
             foreach (var character in chain)
             {
                 foreach (var tile in character.Tiles)
@@ -31,6 +31,22 @@ namespace WaveTeam.Core
                 }
             }
             return notes;
+        }
+
+        /// <summary>一名角色的总拍数（所有 tile 时值之和）。</summary>
+        public static float TotalBeats(Character character)
+        {
+            float total = 0f;
+            foreach (var tile in character.Tiles) total += tile.Duration;
+            return total;
+        }
+
+        /// <summary>一条链条的总拍数。</summary>
+        public static float TotalBeats(IEnumerable<Character> chain)
+        {
+            float total = 0f;
+            foreach (var character in chain) total += TotalBeats(character);
+            return total;
         }
     }
 }

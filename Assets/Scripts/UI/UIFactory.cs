@@ -33,7 +33,7 @@ namespace WaveTeam.UI
             text.fontSize = size;
             text.color = color;
             text.alignment = anchor;
-            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
             return text;
         }
 
@@ -51,10 +51,10 @@ namespace WaveTeam.UI
             labelGo.transform.SetParent(go.transform, false);
             var text = labelGo.GetComponent<Text>();
             text.text = label;
-            text.fontSize = 15;
+            text.fontSize = 30;
             text.color = Color.white;
             text.alignment = TextAnchor.MiddleCenter;
-            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
             Stretch((RectTransform)labelGo.transform);
             return btn;
         }
