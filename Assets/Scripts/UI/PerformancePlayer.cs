@@ -16,10 +16,13 @@ namespace WaveTeam.UI
         private AudioSource _drumSource;
 
         private readonly List<PlacedDrum> _order = new List<PlacedDrum>();
+        private readonly List<Hit> _hits = new List<Hit>();
         private bool _playing;
         private float _startWall;
-        private int _nextPlayIdx;
+        private int _nextHitIdx;
         private int _trembleIdx;
+
+        private sealed class Hit { public float Beat; public AudioClip Clip; }
 
         public bool IsPlaying { get { return _playing; } }
 
@@ -54,11 +57,26 @@ namespace WaveTeam.UI
             }
 
             _startWall = Time.time;
-            _nextPlayIdx = 0;
             _trembleIdx = 0;
+            BuildHits();
 
             _bgm.Play();
             _playing = true;
+        }
+
+        /// <summary>把每个已放角色的「已解锁节奏点」展开成逐点敲击事件（拍 + 音色）。</summary>
+        private void BuildHits()
+        {
+            _hits.Clear();
+            foreach (var p in _order)
+            {
+                var clip = p.Character.Sample != null ? p.Character.Sample.Clip : null;
+                if (clip == null) continue;
+                foreach (var pt in p.Character.EffectivePattern.Points)
+                    _hits.Add(new Hit { Beat = p.StartBeat + pt.Beat, Clip = clip });
+            }
+            _hits.Sort((a, b) => a.Beat.CompareTo(b.Beat));
+            _nextHitIdx = 0;
         }
 
         private void Update()
@@ -66,13 +84,12 @@ namespace WaveTeam.UI
             if (!_playing) return;
             float beat = (Time.time - _startWall) / BeatSeconds;
 
-            // 越过起始拍 → 播放鼓音效
-            while (_nextPlayIdx < _order.Count)
+            // 越过节奏点拍 → 播放该角色音色（按节奏点逐点触发，不再每角色只响一下）
+            while (_nextHitIdx < _hits.Count)
             {
-                if (beat < _order[_nextPlayIdx].StartBeat) break;
-                var clip = _order[_nextPlayIdx].Character.Sample.Clip;
-                if (clip != null) _drumSource.PlayOneShot(clip);
-                _nextPlayIdx++;
+                if (beat < _hits[_nextHitIdx].Beat) break;
+                _drumSource.PlayOneShot(_hits[_nextHitIdx].Clip);
+                _nextHitIdx++;
             }
 
             // 越过相邻边界 → 按契合度颤动（接上=大幅，没接上=小幅）
@@ -89,7 +106,7 @@ namespace WaveTeam.UI
 
             // 结束：最后一个鼓播完 + 1 拍余量
             var last = _order[_order.Count - 1];
-            if (beat >= last.StartBeat + last.Character.Waveform.Duration + 1f)
+            if (beat >= last.StartBeat + last.DurationBeats + 1f)
             {
                 _playing = false;
                 if (OnFinished != null) OnFinished(BuildFitText());

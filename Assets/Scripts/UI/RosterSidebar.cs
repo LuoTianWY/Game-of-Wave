@@ -38,7 +38,7 @@ namespace WaveTeam.UI
             Rect.anchoredPosition = Vector2.zero;
 
             var bg = GetComponent<Image>();
-            UIResource.ApplySpriteOrColor(bg, "UI/sidebar", new Color(0.10f, 0.10f, 0.14f, 0.96f));
+            UIStyle.ApplyRound(bg, UIStyle.Panel);
 
             // 卡片容器（面板左起 TabWidth 处开始摆卡）
             _cardsRoot = new GameObject("Cards", typeof(RectTransform)).transform;
@@ -58,7 +58,7 @@ namespace WaveTeam.UI
             var go = new GameObject("Tab", typeof(RectTransform), typeof(Image), typeof(Button));
             go.transform.SetParent(transform, false);
             var img = go.GetComponent<Image>();
-            UIResource.ApplySpriteOrColor(img, "UI/sidebar_tab", new Color(0.30f, 0.60f, 0.85f, 0.95f));
+            UIStyle.ApplyRound(img, UIStyle.Accent2);
             var btn = go.GetComponent<Button>();
             btn.targetGraphic = img;
             btn.onClick.AddListener(Toggle);

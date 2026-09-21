@@ -12,16 +12,16 @@ namespace WaveTeam.UI
     {
         public readonly DrumCharacter Character;
         public float StartBeat;
+        public readonly float DurationBeats; // 时值（拍）：该角色节奏型占的跨度
         public readonly RectTransform Rect;
-        public readonly Image Bg;
-        public readonly WaveformRenderer Waveform;
+        public readonly HexWaveformRenderer Waveform; // 视觉 = 六边形 blob（无框）
 
-        public PlacedDrum(DrumCharacter character, float startBeat, RectTransform rect, Image bg, WaveformRenderer waveform)
+        public PlacedDrum(DrumCharacter character, float startBeat, float durationBeats, RectTransform rect, HexWaveformRenderer waveform)
         {
             Character = character;
             StartBeat = startBeat;
+            DurationBeats = durationBeats;
             Rect = rect;
-            Bg = bg;
             Waveform = waveform;
         }
     }
@@ -34,7 +34,7 @@ namespace WaveTeam.UI
     public sealed class DrumTrackBoard : MonoBehaviour, IScrollHandler, IBeginDragHandler, IDragHandler
     {
         public const float LeftMargin = 80f;
-        public const float DefaultPixelsPerBeat = 240f; // 1 拍 = 1 格，格宽需足够完整展开一条波形
+        public const float DefaultPixelsPerBeat = 120f; // 1 拍 = 120px（16 拍 ≈ 一屏），板子只做整体效果演示，微调进细节面板
         public const float SnapBeat = 1f;               // 吸附到整格（整数拍），不再 0.5 拍
         public const float TrackLengthBeats = 16f;
         public const float TrackHeight = 160f;
@@ -43,11 +43,13 @@ namespace WaveTeam.UI
         public const float MaxPixelsPerBeat = 600f;
         private const float ZoomStep = 1.2f;
         private const float PanSpeed = 600f; // 像素/秒
+        private const float SlotGap = 6f;    // 格槽间距
 
         private BeatSpace _space;
         private readonly List<PlacedDrum> _placed = new List<PlacedDrum>();
         private readonly List<RectTransform> _beatLines = new List<RectTransform>();
         private readonly List<float> _beatLineBeats = new List<float>();
+        private readonly List<RectTransform> _slots = new List<RectTransform>(); // 格槽（缩放时随格宽变化）
         private Transform _drumRoot;
         private Canvas _canvas;
         private float _panLastX;
@@ -76,7 +78,7 @@ namespace WaveTeam.UI
             Rect.pivot = new Vector2(0f, 0.5f);
 
             var bg = GetComponent<Image>();
-            UIResource.ApplySpriteOrColor(bg, "UI/baseplate", new Color(0.16f, 0.24f, 0.38f, 1f));
+            UIResource.ApplySpriteOrColor(bg, "UI/baseplate", UIStyle.Stage);
 
             _space = new BeatSpace(DefaultPixelsPerBeat, LeftMargin);
 
@@ -107,6 +109,20 @@ namespace WaveTeam.UI
             laneRt.offsetMin = new Vector2(0f, -1f);
             laneRt.offsetMax = new Vector2(0f, 1f);
 
+            // 格槽：16 个圆角卡槽，交替底色，让每个可放置格一目了然
+            for (int b = 0; b < (int)TrackLengthBeats; b++)
+            {
+                var slotColor = b % 2 == 0 ? UIStyle.Cell : new Color(0.17f, 0.22f, 0.34f, 1f);
+                var slot = UIFactory.CreatePanel("Slot_" + b, root, slotColor);
+                slot.raycastTarget = false;
+                UIStyle.ApplyRound(slot, slotColor);
+                var srt = slot.rectTransform;
+                srt.anchorMin = srt.anchorMax = srt.pivot = new Vector2(0f, 0.5f);
+                srt.anchoredPosition = new Vector2(_space.ToX(b) + SlotGap * 0.5f, 0f);
+                srt.sizeDelta = new Vector2(_space.SpanToWidth(1f) - SlotGap, TrackHeight - 8f);
+                _slots.Add(srt);
+            }
+
             // 拍线（每 4 拍加粗为小节线）
             for (int b = 0; b <= (int)TrackLengthBeats; b++)
             {
@@ -125,6 +141,8 @@ namespace WaveTeam.UI
         private void AddResetButton()
         {
             var btn = UIFactory.CreateButton("ResetView", transform, "回起点", ResetView);
+            UIStyle.ApplyRound(btn.image, new Color(0.30f, 0.34f, 0.44f, 1f));
+            UIStyle.OutlineText(btn.GetComponentInChildren<Text>());
             var rt = (RectTransform)btn.transform;
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 1f);
             rt.sizeDelta = new Vector2(140, 44);
@@ -200,8 +218,18 @@ namespace WaveTeam.UI
                 var rt = _beatLines[i];
                 rt.anchoredPosition = new Vector2(_space.ToX(_beatLineBeats[i]), rt.anchoredPosition.y);
             }
+            for (int i = 0; i < _slots.Count; i++)
+            {
+                var rt = _slots[i];
+                rt.anchoredPosition = new Vector2(_space.ToX(i) + SlotGap * 0.5f, rt.anchoredPosition.y);
+                rt.sizeDelta = new Vector2(_space.SpanToWidth(1f) - SlotGap, rt.sizeDelta.y);
+            }
             foreach (var p in _placed)
+            {
                 p.Rect.anchoredPosition = new Vector2(_space.ToX(p.StartBeat), p.Rect.anchoredPosition.y);
+                p.Rect.sizeDelta = new Vector2(_space.SpanToWidth(p.DurationBeats), p.Rect.sizeDelta.y);
+                p.Waveform.SetPitch(_space.PixelsPerBeat / RhythmPattern.HexPerBeat);
+            }
         }
 
         // ---------- 落位 / 校验 ----------
@@ -226,11 +254,12 @@ namespace WaveTeam.UI
         /// <summary>同上，但移动时可把正在移动的鼓排除在重叠判定外。</summary>
         public bool CanPlace(DrumCharacter character, float startBeat, PlacedDrum except)
         {
-            // 一格一角色：同格（同整数拍）即冲突，与波形时长无关
+            // 按拍区间判重叠：角色占 [startBeat, startBeat+时值) 一段，区间相交即冲突
+            float dur = character.Pattern.TotalBeats;
             foreach (var p in _placed)
             {
                 if (p == except) continue;
-                if (Mathf.Approximately(p.StartBeat, startBeat)) return false;
+                if (startBeat < p.StartBeat + p.DurationBeats && startBeat + dur > p.StartBeat) return false;
             }
             return true;
         }
@@ -238,7 +267,7 @@ namespace WaveTeam.UI
         /// <summary>落位格是否落在轨道范围内（一格一角色，与时长无关）。</summary>
         public bool IsValidBeatRange(float startBeat, float duration)
         {
-            return startBeat >= 0f && startBeat < TrackLengthBeats;
+            return startBeat >= 0f && startBeat + duration <= TrackLengthBeats;
         }
 
         /// <summary>卡片拖放落点 → 放置；成功返回 true（卡片回侧栏可复用）。</summary>
@@ -249,7 +278,7 @@ namespace WaveTeam.UI
             if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(Rect, screenPos, _canvas.worldCamera, out local)) return false;
             if (Mathf.Abs(local.y) > TrackHeight * 0.5f + 20f) return false; // 需落在轨道竖向范围内
             float beat = Snap(_space.ToBeat(local.x));
-            if (!IsValidBeatRange(beat, card.Character.Waveform.Duration)) return false;
+            if (!IsValidBeatRange(beat, card.Character.Pattern.TotalBeats)) return false;
             return Place(card.Character, beat) != null;
         }
 
@@ -259,10 +288,17 @@ namespace WaveTeam.UI
             card.OnDragEnd = (c, pos) => TryPlaceFromCard(c, pos);
         }
 
+        /// <summary>打开某已放鼓的细节预览（加点/洗点）。</summary>
+        public void OpenDetail(PlacedDrum pd)
+        {
+            if (_canvas == null || pd == null) return;
+            DrumDetailPanel.Show(pd.Character, _canvas.transform);
+        }
+
         /// <summary>移动校验 + 重定位；失败返回 false（保持原位）。</summary>
         public bool TryMove(PlacedDrum pd, float newBeat)
         {
-            if (!IsValidBeatRange(newBeat, pd.Character.Waveform.Duration)) return false;
+            if (!IsValidBeatRange(newBeat, pd.DurationBeats)) return false;
             if (!CanPlace(pd.Character, newBeat, pd)) return false;
             _undo.Push(new UndoAction { Type = UndoType.Move, Drum = pd, OldBeat = pd.StartBeat });
             MoveTo(pd, newBeat);
@@ -345,28 +381,22 @@ namespace WaveTeam.UI
 
         private PlacedDrum CreatePlaced(DrumCharacter character, float startBeat)
         {
-            var cellGo = new GameObject("Drum_" + character.Name, typeof(RectTransform), typeof(Image));
-            cellGo.transform.SetParent(_drumRoot, false);
-            var cellRt = (RectTransform)cellGo.transform;
-            cellRt.anchorMin = cellRt.anchorMax = cellRt.pivot = new Vector2(0f, 0.5f);
-            cellRt.anchoredPosition = new Vector2(_space.ToX(startBeat), 0f);
-            // 一格一条波形：宽度固定为整格（1 拍），波形完整展开，不再按 Duration 压缩
-            cellRt.sizeDelta = new Vector2(_space.SpanToWidth(1f), TrackHeight);
+            // 程序层面是一「方块」（rect 占 [startBeat, startBeat+时值)），玩家看到的只是这个方块里的一坨六边形 blob，无外框
+            var go = new GameObject("Drum_" + character.Name, typeof(RectTransform), typeof(CanvasRenderer), typeof(HexWaveformRenderer));
+            go.transform.SetParent(_drumRoot, false);
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 0.5f);
+            rt.anchoredPosition = new Vector2(_space.ToX(startBeat), 0f);
+            rt.sizeDelta = new Vector2(_space.SpanToWidth(character.Pattern.TotalBeats), TrackHeight);
 
-            var bg = cellGo.GetComponent<Image>();
-            bg.color = new Color(0.16f, 0.16f, 0.22f, 0.85f);
+            var wr = go.GetComponent<HexWaveformRenderer>();
+            wr.SetPattern(character.EffectivePattern, RhythmPattern.StableHash(character.Name));
+            wr.SetPitch(_space.PixelsPerBeat / RhythmPattern.HexPerBeat); // 1 拍 = 8 格，格子随轨距缩放
+            wr.color = new Color(0.45f, 0.85f, 1f, 1f); // 已放置角色：醒目青色
+            wr.raycastTarget = true;                     // 可点击 → 双击打开细节预览（加点/洗点）
 
-            var waveGo = new GameObject("Waveform", typeof(RectTransform), typeof(WaveformRenderer));
-            waveGo.transform.SetParent(cellGo.transform, false);
-            var wr = waveGo.GetComponent<WaveformRenderer>();
-            wr.SetDefinition(character.Waveform);
-            wr.raycastTarget = false;
-            var waveRt = (RectTransform)waveGo.transform;
-            waveRt.anchorMin = Vector2.zero; waveRt.anchorMax = Vector2.one;
-            waveRt.offsetMin = Vector2.zero; waveRt.offsetMax = Vector2.zero;
-
-            var pd = new PlacedDrum(character, startBeat, cellRt, bg, wr);
-            PlacedDrumHandle.Attach(cellGo, this, pd);
+            var pd = new PlacedDrum(character, startBeat, character.Pattern.TotalBeats, rt, wr);
+            PlacedDrumHandle.Attach(go, this, pd);
             return pd;
         }
     }

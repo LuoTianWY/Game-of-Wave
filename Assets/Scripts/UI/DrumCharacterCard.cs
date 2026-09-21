@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using WaveTeam.Audio;
+using WaveTeam.Core;
 
 namespace WaveTeam.UI
 {
@@ -19,7 +20,7 @@ namespace WaveTeam.UI
         /// <summary>拖拽结束回调，返回 true 表示已被安置（不会回原位）。</summary>
         public System.Func<DrumCharacterCard, Vector2, bool> OnDragEnd;
 
-        private WaveformRenderer _waveform;
+        private HexWaveformRenderer _waveform;
         private AudioSource _source;
 
         private Transform _originalParent;
@@ -44,13 +45,15 @@ namespace WaveTeam.UI
             Rect.sizeDelta = new Vector2(Width, Height);
 
             var bg = GetComponent<Image>();
-            UIResource.ApplySpriteOrColor(bg, "UI/card_bg", new Color(0.13f, 0.13f, 0.17f, 0.95f));
+            UIStyle.ApplyRound(bg, UIStyle.Card);
 
-            // 波形预览（上半部）
-            var waveGo = new GameObject("Waveform", typeof(RectTransform), typeof(WaveformRenderer));
+            // 波形预览（上半部）：六边形路径，节奏点高亮
+            var waveGo = new GameObject("Waveform", typeof(RectTransform), typeof(CanvasRenderer), typeof(HexWaveformRenderer));
             waveGo.transform.SetParent(transform, false);
-            _waveform = waveGo.GetComponent<WaveformRenderer>();
-            _waveform.SetDefinition(Character.Waveform);
+            _waveform = waveGo.GetComponent<HexWaveformRenderer>();
+            _waveform.SetPattern(Character.EffectivePattern, RhythmPattern.StableHash(Character.Name));
+            _waveform.SetPitch(264f / (Character.Pattern.TotalBeats * RhythmPattern.HexPerBeat)); // 缩略图：整段波形铺满卡宽
+            Character.Changed += RefreshWaveform;
             _waveform.color = new Color(0.45f, 0.85f, 1f, 1f); // 波形即角色符号，用醒目青色
             _waveform.raycastTarget = false;
             var waveRt = (RectTransform)waveGo.transform;
@@ -62,7 +65,8 @@ namespace WaveTeam.UI
             // 名字 + 性格名词（左下）
             var label = UIFactory.CreateText("Label", transform,
                 Character.Name + " · " + Character.Noun, 20,
-                new Color(0.92f, 0.92f, 0.96f, 1f), TextAnchor.MiddleLeft);
+                UIStyle.Text, TextAnchor.MiddleLeft);
+            UIStyle.OutlineText(label);
             label.raycastTarget = false;
             var labelRt = (RectTransform)label.transform;
             labelRt.anchorMin = labelRt.anchorMax = labelRt.pivot = new Vector2(0f, 0f);
@@ -81,7 +85,7 @@ namespace WaveTeam.UI
             var go = new GameObject("Play", typeof(RectTransform), typeof(Image), typeof(Button));
             go.transform.SetParent(transform, false);
             var img = go.GetComponent<Image>();
-            img.color = new Color(0.30f, 0.60f, 0.85f, 0.95f);
+            UIStyle.ApplyRound(img, UIStyle.Accent);
             var btn = go.GetComponent<Button>();
             btn.targetGraphic = img;
             btn.onClick.AddListener(PlayPreview);
@@ -91,6 +95,7 @@ namespace WaveTeam.UI
             rt.anchoredPosition = new Vector2(-10f, 4f);
 
             var label = UIFactory.CreateText("Label", go.transform, "试听", 20, Color.white, TextAnchor.MiddleCenter);
+            UIStyle.OutlineText(label);
             label.raycastTarget = false;
             UIFactory.Stretch((RectTransform)label.transform);
         }
@@ -99,6 +104,18 @@ namespace WaveTeam.UI
         {
             if (Character == null || Character.Sample == null || Character.Sample.Clip == null) return;
             _source.PlayOneShot(Character.Sample.Clip);
+        }
+
+        /// <summary>加点/洗点后刷新波形预览（角色共享，故订阅其 Changed 事件）。</summary>
+        private void RefreshWaveform()
+        {
+            if (_waveform != null && Character != null)
+                _waveform.SetPattern(Character.EffectivePattern, RhythmPattern.StableHash(Character.Name));
+        }
+
+        private void OnDestroy()
+        {
+            if (Character != null) Character.Changed -= RefreshWaveform;
         }
 
         public void OnBeginDrag(PointerEventData e)

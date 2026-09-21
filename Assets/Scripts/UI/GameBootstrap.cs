@@ -77,6 +77,12 @@ namespace WaveTeam.UI
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920, 1080);
             scaler.matchWidthOrHeight = 0f;
+
+            // 全屏底色（舞台外的兜底背景）
+            var bg = UIFactory.CreatePanel("Background", go.transform, UIStyle.BgDeep);
+            bg.raycastTarget = false;
+            UIFactory.Stretch((RectTransform)bg.transform);
+
             return canvas;
         }
 
@@ -84,7 +90,8 @@ namespace WaveTeam.UI
         {
             _statusText = UIFactory.CreateText("Status", _canvas.transform,
                 "把右侧角色拖到鼓轨上（同轨不重叠）· 左键拖动移动 · 右键收回", 26,
-                new Color(0.8f, 0.8f, 0.85f, 1f), TextAnchor.MiddleCenter);
+                UIStyle.Text, TextAnchor.MiddleCenter);
+            UIStyle.OutlineText(_statusText);
             var stRt = (RectTransform)_statusText.transform;
             stRt.anchorMin = stRt.anchorMax = stRt.pivot = new Vector2(0.5f, 1f);
             stRt.sizeDelta = new Vector2(1400, 40);
@@ -100,20 +107,24 @@ namespace WaveTeam.UI
             _perf.OnFinished = msg => _statusText.text = msg;
 
             var btn = UIFactory.CreateButton("Play", _canvas.transform, "演出！", OnPlay);
+            UIStyle.ApplyRound(btn.image, UIStyle.Accent);
+            UIStyle.OutlineText(btn.GetComponentInChildren<Text>());
             var rt = (RectTransform)btn.transform;
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0f);
             rt.sizeDelta = new Vector2(240, 64);
             rt.anchoredPosition = new Vector2(0, 20);
 
             var confirm = UIFactory.CreateButton("Confirm", _canvas.transform, "确定", OnConfirm);
-            UIResource.TryApply(confirm.image, "UI/btn_confirm");
+            UIStyle.ApplyRound(confirm.image, UIStyle.Ok);
+            UIStyle.OutlineText(confirm.GetComponentInChildren<Text>());
             var crt = (RectTransform)confirm.transform;
             crt.anchorMin = crt.anchorMax = crt.pivot = new Vector2(0f, 0f);
             crt.sizeDelta = new Vector2(120, 44);
             crt.anchoredPosition = new Vector2(16, 16);
 
             var cancel = UIFactory.CreateButton("Cancel", _canvas.transform, "取消", OnCancel);
-            UIResource.TryApply(cancel.image, "UI/btn_cancel");
+            UIStyle.ApplyRound(cancel.image, new Color(0.30f, 0.33f, 0.40f, 1f));
+            UIStyle.OutlineText(cancel.GetComponentInChildren<Text>());
             var xrt = (RectTransform)cancel.transform;
             xrt.anchorMin = xrt.anchorMax = xrt.pivot = new Vector2(0f, 0f);
             xrt.sizeDelta = new Vector2(120, 44);

@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
+using WaveTeam.Core;
 
 namespace WaveTeam.UI
 {
@@ -22,7 +23,21 @@ namespace WaveTeam.UI
             h._board = board;
             h._placed = placed;
             h._originalPivot = placed.Rect.pivot;
+            placed.Character.Changed += h.Refresh;
             return h;
+        }
+
+        /// <summary>加点/洗点后刷新这条六边形 blob 的形状。</summary>
+        private void Refresh()
+        {
+            if (_placed == null || _placed.Character == null || _placed.Waveform == null) return;
+            _placed.Waveform.SetPattern(_placed.Character.EffectivePattern, RhythmPattern.StableHash(_placed.Character.Name));
+        }
+
+        private void OnDestroy()
+        {
+            if (_placed != null && _placed.Character != null)
+                _placed.Character.Changed -= Refresh;
         }
 
         public void OnBeginDrag(PointerEventData e)
@@ -63,6 +78,10 @@ namespace WaveTeam.UI
             if (e.button == PointerEventData.InputButton.Right)
             {
                 _board.Remove(_placed);
+            }
+            else if (e.button == PointerEventData.InputButton.Left && e.clickCount >= 2)
+            {
+                _board.OpenDetail(_placed); // 左键双击：打开细节预览（加点/洗点）；单击留给拖拽
             }
         }
 
