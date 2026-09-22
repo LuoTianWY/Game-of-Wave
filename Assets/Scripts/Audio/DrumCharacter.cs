@@ -28,6 +28,9 @@ namespace WaveTeam.Audio
         /// <summary>已解锁的路径格数（前缀长度）。</summary>
         public int UnlockedCells { get { return _unlockedCells; } }
 
+        /// <summary>该角色的纵向抬升档位（-2..+2，由名字 seed 决定）；用于判断前后端点能否接上。</summary>
+        public int Level { get { return RhythmPattern.LevelForSeed(RhythmPattern.StableHash(Name)); } }
+
         /// <summary>已解锁的节奏点数量（前缀覆盖到的节点数，≥1）。</summary>
         public int UnlockedPoints { get { int c = 0; for (int i = 0; i < _path.Count && i < _unlockedCells; i++) if (_path[i].IsRhythm) c++; return c; } }
 

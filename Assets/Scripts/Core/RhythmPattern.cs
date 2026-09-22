@@ -65,6 +65,8 @@ namespace WaveTeam.Core
         public List<HexCell> BuildPath(int seed)
         {
             var cells = new List<HexCell>();
+            // 每个角色整体纵向抬升一个不同高度（由 seed 决定），让不同角色的首尾端点可能不在同一高度 → 前后可能接不上
+            int level = LevelForSeed(seed); // -2..+2
             // 方向（y 向上，与 HexLayout 一致）：右 / 右上 / 右下
             var right = new HexCoord(1, 0);
             var up = new HexCoord(0, 1);
@@ -108,6 +110,16 @@ namespace WaveTeam.Core
                     for (int i = 0; i < m; i++) { last += first; cells.Add(new HexCell(last, false, false, lastIdx)); }
                     for (int i = 0; i < h - m; i++) { last += right; cells.Add(new HexCell(last, false, false, lastIdx)); }
                     for (int i = 0; i < m; i++) { last += second; cells.Add(new HexCell(last, false, false, lastIdx)); }
+                }
+            }
+            // 整体纵向平移 level，让首尾端点落在不同高度（不同角色可能接不上）
+            if (level != 0)
+            {
+                var off = new HexCoord(0, level);
+                for (int i = 0; i < cells.Count; i++)
+                {
+                    var c = cells[i];
+                    cells[i] = new HexCell(c.Hex + off, c.IsRhythm, c.Accent, c.PointIndex);
                 }
             }
             return cells;
@@ -189,6 +201,12 @@ namespace WaveTeam.Core
             int h = 0;
             foreach (char c in s) h = h * 31 + c;
             return h;
+        }
+
+        /// <summary>由 seed 决定角色的纵向抬升档位（-2..+2）；BuildPath 与连接桥共用，保证一致。</summary>
+        public static int LevelForSeed(int seed)
+        {
+            return ((seed % 5) + 5) % 5 - 2;
         }
     }
 }

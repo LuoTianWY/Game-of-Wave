@@ -27,6 +27,13 @@ namespace WaveTeam.UI
         private float _tremble;               // 共振颤动强度 0..1（脉冲放大）
         private Coroutine _trembleCo;
         private int _unlockedCells = int.MaxValue; // 已解锁路径格数（前缀）；≥此下标的格子画成暗灰「未解锁」；默认全解锁
+        private bool _tailPending;   // 尾巴是否处于「待连接」暗态（板上后面接了不同角色时置真）
+        private int _tailStart;      // 尾巴起始下标（最后一个节奏点格之后）；无节奏点 = _path.Count
+        private bool _baselineAnchored; // 是否锚定 r=0 到 rect 中心（板上用，让不同角色的纵向高度差异可见）
+        private List<HexCoord> _bridge; // 连接桥的格（板上相邻角色端点错位时自动补的隐约未解锁格）
+        private bool _bridgeConnected;  // 桥是否已连接（已连接画亮色，未连接画隐约）
+        private bool _tailFused;       // 尾巴处于「已连接融合」态（与后一个鼓融合显示）
+        private Color _tailFuseColor;  // 融合色（前后角色颜色的混合）
 
         /// <summary>点击到某个路径格时触发（参数 = 路径格下标、是否右键；供细节预览点击加点/取消用）。</summary>
         public event System.Action<int, bool> CellClicked;
@@ -35,6 +42,7 @@ namespace WaveTeam.UI
         public void SetPattern(RhythmPattern pattern, int seed)
         {
             _path = pattern != null ? pattern.BuildPath(seed) : null;
+            RecomputeTailStart();
             ComputeBounds();
             SetVerticesDirty();
         }
@@ -54,6 +62,47 @@ namespace WaveTeam.UI
         public void SetUnlocked(int cellCount)
         {
             _unlockedCells = cellCount;
+            SetVerticesDirty();
+        }
+
+        /// <summary>设置尾巴「待连接」暗态（板上后面接了不同角色时用）；只改显示，不影响加点/发声。</summary>
+        public void SetTailPending(bool pending)
+        {
+            if (_tailPending == pending) return;
+            _tailPending = pending;
+            SetVerticesDirty();
+        }
+
+        private void RecomputeTailStart()
+        {
+            _tailStart = _path != null ? _path.Count : 0;
+            if (_path == null) return;
+            for (int i = _path.Count - 1; i >= 0; i--)
+                if (_path[i].IsRhythm) { _tailStart = i + 1; break; }
+        }
+
+        /// <summary>是否把 r=0 锚定到 rect 中心（板上用，让不同角色的纵向高度差异可见）；默认居中整条波形。</summary>
+        public void SetBaselineAnchored(bool anchored)
+        {
+            if (_baselineAnchored == anchored) return;
+            _baselineAnchored = anchored;
+            SetVerticesDirty();
+        }
+
+        /// <summary>设置连接桥的格（null/空 = 无桥）；connected=true 画亮色（已连接），否则画隐约未解锁。仅显示，不参与加点/发声。</summary>
+        public void SetBridge(List<HexCoord> cells, bool connected)
+        {
+            _bridge = cells;
+            _bridgeConnected = connected;
+            SetVerticesDirty();
+        }
+
+        /// <summary>设置尾巴「已连接融合」态与融合色（已连接时尾巴/桥用融合色画亮）；fused=false 时不融合。</summary>
+        public void SetTailFused(bool fused, Color fuseColor)
+        {
+            if (_tailFused == fused && _tailFuseColor == fuseColor) return;
+            _tailFused = fused;
+            _tailFuseColor = fuseColor;
             SetVerticesDirty();
         }
 
@@ -113,8 +162,8 @@ namespace WaveTeam.UI
             var rect = GetPixelAdjustedRect();
             if (rect.width <= 0f || rect.height <= 0f || _path == null || _path.Count == 0) return;
 
-            // 固定格距，水平锚定 rect 左缘（q=0 中心 = 拍线），垂直居中；不做等比缩放，保证格子大小恒定
-            float originY = rect.center.y - (_pathMinY + _pathMaxY) * 0.5f;
+            // 固定格距，水平锚定 rect 左缘（q=0 中心 = 拍线）；垂直默认居中，板上锚定 r=0 到中心（让纵向高度差异可见）
+            float originY = _baselineAnchored ? rect.center.y : rect.center.y - (_pathMinY + _pathMaxY) * 0.5f;
             float size = _layout.Size;
             float pulse = 1f + _tremble * 0.15f;
 
@@ -126,11 +175,17 @@ namespace WaveTeam.UI
                 var cell = _path[i];
                 Vector2 p = _layout.HexToPixel(cell.Hex);
                 Vector2 c = new Vector2(p.x, p.y + originY);
-                bool locked = i >= _unlockedCells;
+                bool tailFused = _tailFused && i >= _tailStart;
+                bool locked = !tailFused && (i >= _unlockedCells || (_tailPending && i >= _tailStart));
 
-                if (locked)
+                if (tailFused)
                 {
-                    // 未解锁：暗灰「骨架轮廓」，无光晕、略小，与已解锁亮块形成对比
+                    // 已连接：尾巴用融合色画亮（前后角色颜色混合），表示边界打通
+                    DrawHex(vh, c, size * 0.92f * pulse, _tailFuseColor);
+                }
+                else if (locked)
+                {
+                    // 未解锁或待连接尾巴：暗灰「骨架轮廓」，无光晕、略小，与已解锁亮块形成对比
                     var lc = cell.IsRhythm
                         ? new Color(0.42f, 0.44f, 0.52f, 0.50f)   // 未解锁节奏点
                         : new Color(0.42f, 0.44f, 0.52f, 0.22f);  // 未解锁填充
@@ -148,6 +203,20 @@ namespace WaveTeam.UI
                     DrawHex(vh, c, size * 0.92f * pulse, normalColor); // 略小留缝
                 }
             }
+
+            // 连接桥：端点错位时补的格子（未连接隐约，已连接亮色融合）
+            if (_bridge != null)
+            {
+                var bridgeColor = _bridgeConnected
+                    ? new Color(_tailFuseColor.r, _tailFuseColor.g, _tailFuseColor.b, _tailFuseColor.a * 0.6f)
+                    : new Color(0.42f, 0.44f, 0.52f, 0.18f);
+                float br = size * (_bridgeConnected ? 0.92f : 0.8f);
+                foreach (var h in _bridge)
+                {
+                    Vector2 bp = _layout.HexToPixel(h);
+                    DrawHex(vh, new Vector2(bp.x, bp.y + originY), br, bridgeColor);
+                }
+            }
         }
 
         /// <summary>把本组件局部坐标命中到路径格下标（供细节预览点击加点/取消）；未命中返回 -1。</summary>
@@ -155,7 +224,7 @@ namespace WaveTeam.UI
         {
             if (_path == null || _path.Count == 0) return -1;
             var rect = GetPixelAdjustedRect();
-            float originY = rect.center.y - (_pathMinY + _pathMaxY) * 0.5f;
+            float originY = _baselineAnchored ? rect.center.y : rect.center.y - (_pathMinY + _pathMaxY) * 0.5f;
             var h = _layout.PixelToHex(new Vector2(localPoint.x, localPoint.y - originY));
             for (int i = 0; i < _path.Count; i++)
                 if (_path[i].Hex == h) return i;

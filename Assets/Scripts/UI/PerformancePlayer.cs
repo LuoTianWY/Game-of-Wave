@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 using WaveTeam.Audio;
-using WaveTeam.Core;
 
 namespace WaveTeam.UI
 {
@@ -98,7 +97,7 @@ namespace WaveTeam.UI
                 if (beat < _order[_trembleIdx + 1].StartBeat) break;
                 var prev = _order[_trembleIdx];
                 var next = _order[_trembleIdx + 1];
-                float intensity = EndpointFit.Fits(prev.Character.Waveform, next.Character.Waveform) ? 1f : 0.15f;
+                float intensity = prev.ConnectedToNext ? 1f : 0.15f; // 已连接=满强度共振，未连接=小幅颤动
                 prev.Waveform.Tremble(intensity);
                 next.Waveform.Tremble(intensity);
                 _trembleIdx++;
@@ -117,11 +116,21 @@ namespace WaveTeam.UI
 
         private string BuildFitText()
         {
-            var waves = new List<WaveformDefinition>();
-            foreach (var p in _order) waves.Add(p.Character.Waveform);
-            var r = EndpointFit.Evaluate(waves);
-            if (r.Pairs == 0) return "契合 · 只有 " + _order.Count + " 个鼓，还接不上";
-            return "契合 " + r.Matches + "/" + r.Pairs + " · " + Mathf.RoundToInt(r.Score * 100f) + "%";
+            int connectable = 0, connected = 0;
+            for (int i = 0; i < _order.Count - 1; i++)
+            {
+                var a = _order[i];
+                var b = _order[i + 1];
+                bool contiguous = Mathf.Abs(b.StartBeat - (a.StartBeat + a.DurationBeats)) < 1e-3f;
+                bool different = b.Character.Name != a.Character.Name;
+                if (contiguous && different)
+                {
+                    connectable++;
+                    if (a.ConnectedToNext) connected++;
+                }
+            }
+            if (connectable == 0) return "契合 · 只有 " + _order.Count + " 个鼓，还接不上";
+            return "契合 " + connected + "/" + connectable + " · " + Mathf.RoundToInt(connected / (float)connectable * 100f) + "%";
         }
     }
 }

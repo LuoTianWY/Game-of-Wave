@@ -15,6 +15,8 @@ namespace WaveTeam.UI
         public readonly float DurationBeats; // 时值（拍）：该角色节奏型占的跨度
         public readonly RectTransform Rect;
         public readonly HexWaveformRenderer Waveform; // 视觉 = 六边形 blob（无框）
+        public bool ConnectedToNext;                  // 是否与紧随其后的鼓「已连接」（接缝标记）
+        public GameObject SeamNode;                   // 接缝处的连接点按钮（待连接时显示）
 
         public PlacedDrum(DrumCharacter character, float startBeat, float durationBeats, RectTransform rect, HexWaveformRenderer waveform)
         {
@@ -318,6 +320,7 @@ namespace WaveTeam.UI
         {
             var pd = CreatePlaced(character, startBeat);
             _placed.Add(pd);
+            RefreshConnections();
             return pd;
         }
 
@@ -326,6 +329,7 @@ namespace WaveTeam.UI
         {
             pd.StartBeat = newBeat;
             pd.Rect.anchoredPosition = new Vector2(_space.ToX(newBeat), pd.Rect.anchoredPosition.y);
+            RefreshConnections();
         }
 
         public void Remove(PlacedDrum pd)
@@ -337,6 +341,97 @@ namespace WaveTeam.UI
         private void RemoveInternal(PlacedDrum pd)
         {
             if (_placed.Remove(pd)) Object.Destroy(pd.Rect.gameObject);
+            RefreshConnections();
+        }
+
+        /// <summary>刷新相邻鼓的「尾巴待连接」状态：某鼓后面紧跟了不同角色 → 其尾巴画暗（未连接）；没接/接自己 → 原样。</summary>
+        private void RefreshConnections()
+        {
+            var sorted = new List<PlacedDrum>(_placed);
+            sorted.Sort((a, b) => a.StartBeat.CompareTo(b.StartBeat));
+            for (int i = 0; i < sorted.Count; i++)
+            {
+                var cur = sorted[i];
+                bool pending = false;
+                List<HexCoord> bridge = null;
+                Color fuseColor = Color.white; // 融合色（前后角色颜色混合），已连接时给尾巴/桥用
+                if (i + 1 < sorted.Count)
+                {
+                    var next = sorted[i + 1];
+                    bool contiguous = Mathf.Abs(next.StartBeat - (cur.StartBeat + cur.DurationBeats)) < 1e-3f;
+                    bool different = next.Character.Name != cur.Character.Name;
+                    pending = contiguous && different;
+                    fuseColor = Color.Lerp(cur.Waveform.color, next.Waveform.color, 0.5f);
+                    if (pending)
+                    {
+                        // 端点错位（纵向高度不同）→ 在接缝处补一段垂直的桥，把前后连上
+                        int la = cur.Character.Level;
+                        int lb = next.Character.Level;
+                        int d = lb - la;
+                        if (Mathf.Abs(d) >= 2)
+                        {
+                            int seamQ = Mathf.RoundToInt(RhythmPattern.HexPerBeat * cur.DurationBeats);
+                            int step = d > 0 ? 1 : -1;
+                            bridge = new List<HexCoord>();
+                            for (int r = la + step; r != lb; r += step)
+                                bridge.Add(new HexCoord(seamQ, r));
+                        }
+                    }
+                }
+
+                if (!pending) cur.ConnectedToNext = false; // 不再接别人，连接标记作废
+                cur.Waveform.SetTailPending(pending && !cur.ConnectedToNext);
+                cur.Waveform.SetBridge(bridge, cur.ConnectedToNext);
+                cur.Waveform.SetTailFused(pending && cur.ConnectedToNext, fuseColor); // 已连接 → 尾巴/桥融合色
+
+                if (pending)
+                {
+                    if (cur.SeamNode == null) cur.SeamNode = CreateSeamNode(cur);
+                    var img = cur.SeamNode.GetComponent<Image>();
+                    if (img != null) img.color = cur.ConnectedToNext
+                        ? new Color(0.46f, 0.86f, 0.56f, 0.95f)   // 绿：已连接
+                        : new Color(1f, 0.82f, 0.35f, 0.95f);      // 金黄：待连接
+                }
+                else if (cur.SeamNode != null)
+                {
+                    Object.Destroy(cur.SeamNode);
+                    cur.SeamNode = null;
+                }
+            }
+        }
+
+        /// <summary>在 cur 的右缘创建一个可点的「连接点」，点击切换与后一个鼓的连接标记。</summary>
+        private GameObject CreateSeamNode(PlacedDrum cur)
+        {
+            var go = new GameObject("Seam", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
+            go.transform.SetParent(cur.Rect, false);
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = rt.anchorMax = new Vector2(1f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.sizeDelta = new Vector2(22f, 22f);
+            rt.anchoredPosition = new Vector2(-12f, 0f); // 落在 cur 右缘内侧，避免被后一个鼓的 blob 盖住
+
+            var img = go.GetComponent<Image>();
+            img.sprite = UIStyle.Round;
+            img.type = Image.Type.Sliced;
+            img.color = new Color(1f, 0.82f, 0.35f, 0.95f); // 金黄：待连接
+
+            // 中间放个「+」字形，表明这是可点的连接点；状态（待连接/已连接）由颜色表达
+            var glyph = UIFactory.CreateText("Glyph", go.transform, "+", 14, new Color(0.12f, 0.10f, 0.03f, 1f), TextAnchor.MiddleCenter);
+            UIFactory.Stretch((RectTransform)glyph.transform);
+            glyph.raycastTarget = false; // 让点击落在按钮上，不被文字挡住
+
+            var btn = go.GetComponent<Button>();
+            btn.targetGraphic = img;
+            btn.onClick.AddListener(() => ToggleConnection(cur));
+            return go;
+        }
+
+        /// <summary>切换 cur 与后一个鼓的连接标记（仅状态，不改加点/发声）。</summary>
+        private void ToggleConnection(PlacedDrum cur)
+        {
+            cur.ConnectedToNext = !cur.ConnectedToNext;
+            RefreshConnections();
         }
 
         public void Clear()
@@ -392,12 +487,21 @@ namespace WaveTeam.UI
             var wr = go.GetComponent<HexWaveformRenderer>();
             wr.SetPattern(character.EffectivePattern, RhythmPattern.StableHash(character.Name));
             wr.SetPitch(_space.PixelsPerBeat / RhythmPattern.HexPerBeat); // 1 拍 = 8 格，格子随轨距缩放
-            wr.color = new Color(0.45f, 0.85f, 1f, 1f); // 已放置角色：醒目青色
+            wr.SetBaselineAnchored(true); // 锚定 r=0 到轨心，让不同角色的纵向高度差异（端点能否接上）可见
+            wr.color = CharacterColor(character); // 每个角色一个专属色，连接时才能看到颜色融合
             wr.raycastTarget = true;                     // 可点击 → 双击打开细节预览（加点/洗点）
 
             var pd = new PlacedDrum(character, startBeat, character.Pattern.TotalBeats, rt, wr);
             PlacedDrumHandle.Attach(go, this, pd);
             return pd;
+        }
+
+        /// <summary>每个角色一个专属色（由名字 hash 生成，同角色同色），连接时边界才能看到颜色融合。</summary>
+        private static Color CharacterColor(DrumCharacter character)
+        {
+            float hue = (RhythmPattern.StableHash(character.Name) * 0.61803398875f) % 1f;
+            if (hue < 0f) hue += 1f;
+            return Color.HSVToRGB(hue, 0.55f, 0.95f);
         }
     }
 }
