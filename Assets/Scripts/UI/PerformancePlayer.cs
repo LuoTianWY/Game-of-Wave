@@ -63,6 +63,13 @@ namespace WaveTeam.UI
             _playing = true;
         }
 
+        /// <summary>立即停止演出：停止鼓音效计时驱动。</summary>
+        public void Stop()
+        {
+            _playing = false;
+            if (_drumSource != null) _drumSource.Stop();
+        }
+
         /// <summary>把每个已放角色的「已解锁节奏点」展开成逐点敲击事件（拍 + 音色）。</summary>
         private void BuildHits()
         {

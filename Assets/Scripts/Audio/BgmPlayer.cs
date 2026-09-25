@@ -68,6 +68,12 @@ namespace WaveTeam.Audio
             _source.Play();
         }
 
+        /// <summary>立即停止 BGM 播放。</summary>
+        public void Stop()
+        {
+            if (_source != null) _source.Stop();
+        }
+
         /// <summary>当前播放到的秒数（未加载 BGM 时返回 -1，由调用方回退到程序计时）。</summary>
         public float Time { get { return _clip == null ? -1f : _source.time; } }
     }
