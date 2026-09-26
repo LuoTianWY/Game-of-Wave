@@ -8,6 +8,23 @@ namespace WaveTeam.UI
     /// <summary>程序化构建 uGUI 的工厂方法。</summary>
     public static class UIFactory
     {
+        /// <summary>
+        /// 内置字体兼容获取：Unity/团结 2022.2+ 为 LegacyRuntime.ttf，2021 为 Arial.ttf。
+        /// 直接用旧名字在 2022.2+ 会抛 ArgumentException，导致整段 UI 创建中断。
+        /// </summary>
+        public static Font BuiltinFont()
+        {
+            Font font = null;
+            try { font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"); }
+            catch { /* 旧版本没有这个内置字体 */ }
+            if (font == null)
+            {
+                try { font = Resources.GetBuiltinResource<Font>("Arial.ttf"); }
+                catch { /* 新版本已移除 Arial */ }
+            }
+            return font;
+        }
+
         public static RectTransform CreateRect(string name, Transform parent)
         {
             var go = new GameObject(name, typeof(RectTransform));
@@ -33,7 +50,7 @@ namespace WaveTeam.UI
             text.fontSize = size;
             text.color = color;
             text.alignment = anchor;
-            text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            text.font = BuiltinFont();
             return text;
         }
 
@@ -54,7 +71,7 @@ namespace WaveTeam.UI
             text.fontSize = 30;
             text.color = Color.white;
             text.alignment = TextAnchor.MiddleCenter;
-            text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            text.font = BuiltinFont();
             Stretch((RectTransform)labelGo.transform);
             return btn;
         }

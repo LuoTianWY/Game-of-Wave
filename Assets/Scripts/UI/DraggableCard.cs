@@ -106,7 +106,7 @@ namespace WaveTeam.UI
             text.fontSize = 24;
             text.color = new Color(0.92f, 0.92f, 0.96f, 1f);
             text.alignment = TextAnchor.LowerLeft;
-            text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            text.font = UIFactory.BuiltinFont();
             text.raycastTarget = false;
             var rt = (RectTransform)nameGo.transform;
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 1f);
