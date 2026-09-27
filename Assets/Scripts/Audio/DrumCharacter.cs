@@ -12,6 +12,7 @@ namespace WaveTeam.Audio
         public readonly string Name;
         public readonly DrumSample Sample; // 音色源：基准波形定义 + AudioClip + 文件名
         public readonly RhythmPattern Pattern; // 完整节奏型骨架（含全部节奏点）
+        public readonly HexCategory Category; // 音色大类：决定六边形贴图与基色（rand 分配，角色绑定后续再做）
 
         private readonly List<HexCell> _path; // 展开后的完整波形路径（格序固定，解锁按「路径前缀」计）
         private int _unlockedCells;           // 已解锁的路径格数（前缀长度：path[0.._unlockedCells-1] 亮，其余暗）
@@ -46,11 +47,12 @@ namespace WaveTeam.Audio
             }
         }
 
-        public DrumCharacter(string name, DrumSample sample, RhythmPattern pattern)
+        public DrumCharacter(string name, DrumSample sample, RhythmPattern pattern, HexCategory category)
         {
             Name = name;
             Sample = sample;
             Pattern = pattern;
+            Category = category;
             _path = pattern.BuildPath(RhythmPattern.StableHash(name));
             // 默认解锁到第 2 个节奏点（下标 1）的节点格；不足 2 点或仅 2 点（末点含尾巴）则全解锁
             int secondNode = -1;
@@ -128,7 +130,9 @@ namespace WaveTeam.Audio
                 {
                     sample = samples[rng.Next(samples.Count)];
                 }
-                result.Add(new DrumCharacter(name, sample, RhythmPattern.ForSeed(RhythmPattern.StableHash(name))));
+                // 音色大类与鼓样本各自独立随机（角色↔大类的正式绑定后续再做）
+                var category = HexCategoryInfo.FromIndex(rng.Next(HexCategoryInfo.Count));
+                result.Add(new DrumCharacter(name, sample, RhythmPattern.ForSeed(RhythmPattern.StableHash(name)), category));
             }
             return result;
         }

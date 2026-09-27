@@ -86,7 +86,8 @@ namespace WaveTeam.UI
             _waveform.SetPattern(_character.Pattern, RhythmPattern.StableHash(_character.Name));
             _waveform.SetUnlocked(_character.UnlockedCells);
             _waveform.SetPitch(40f); // 固定格距：格子够大便于点击，超出可视区可拖动查看
-            _waveform.color = new Color(0.45f, 0.85f, 1f, 1f);
+            _waveform.color = Color.white;                      // 颜色由音色大类贴图提供
+            _waveform.SetCategory(_character.Category);          // 六边形外观 = 音色大类贴图
             _waveform.raycastTarget = true; // 可直接点击波形上的格子加点（点到哪加到哪）
             _waveform.CellClicked += OnCellClicked;
             var wrt = (RectTransform)waveGo.transform;

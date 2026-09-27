@@ -488,7 +488,8 @@ namespace WaveTeam.UI
             wr.SetPattern(character.EffectivePattern, RhythmPattern.StableHash(character.Name));
             wr.SetPitch(_space.PixelsPerBeat / RhythmPattern.HexPerBeat); // 1 拍 = 8 格，格子随轨距缩放
             wr.SetBaselineAnchored(true); // 锚定 r=0 到轨心，让不同角色的纵向高度差异（端点能否接上）可见
-            wr.color = CharacterColor(character); // 每个角色一个专属色，连接时才能看到颜色融合
+            wr.color = Color.white;                       // 颜色由音色大类贴图提供，不再叠角色专属色
+            wr.SetCategory(character.Category);           // 六边形外观 = 音色大类贴图（同色系边缘设计）
             wr.raycastTarget = true;                     // 可点击 → 双击打开细节预览（加点/洗点）
 
             var pd = new PlacedDrum(character, startBeat, character.Pattern.TotalBeats, rt, wr);
@@ -496,12 +497,5 @@ namespace WaveTeam.UI
             return pd;
         }
 
-        /// <summary>每个角色一个专属色（由名字 hash 生成，同角色同色），连接时边界才能看到颜色融合。</summary>
-        private static Color CharacterColor(DrumCharacter character)
-        {
-            float hue = (RhythmPattern.StableHash(character.Name) * 0.61803398875f) % 1f;
-            if (hue < 0f) hue += 1f;
-            return Color.HSVToRGB(hue, 0.55f, 0.95f);
-        }
     }
 }

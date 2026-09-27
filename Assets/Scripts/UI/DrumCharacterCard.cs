@@ -54,7 +54,8 @@ namespace WaveTeam.UI
             _waveform.SetPattern(Character.EffectivePattern, RhythmPattern.StableHash(Character.Name));
             _waveform.SetPitch(264f / (Character.Pattern.TotalBeats * RhythmPattern.HexPerBeat)); // 缩略图：整段波形铺满卡宽
             Character.Changed += RefreshWaveform;
-            _waveform.color = new Color(0.45f, 0.85f, 1f, 1f); // 波形即角色符号，用醒目青色
+            _waveform.color = Color.white;                      // 颜色由音色大类贴图提供
+            _waveform.SetCategory(Character.Category);           // 六边形外观 = 音色大类贴图
             _waveform.raycastTarget = false;
             var waveRt = (RectTransform)waveGo.transform;
             waveRt.anchorMin = new Vector2(0f, 0.45f);

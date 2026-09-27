@@ -35,6 +35,10 @@ namespace WaveTeam.UI
         private bool _tailFused;       // 尾巴处于「已连接融合」态（与后一个鼓融合显示）
         private Color _tailFuseColor;  // 融合色（前后角色颜色的混合）
 
+        // ---- 六边形贴图（音色大类）----
+        private Sprite _hexSprite;                              // 当前贴图（null = 纯程序化绘制）
+        private Vector4 _hexUv = new Vector4(0f, 0f, 1f, 1f);   // 贴图里六边形的 UV 包围盒（x=u0,y=v0,z=uW,w=vH）
+
         /// <summary>点击到某个路径格时触发（参数 = 路径格下标、是否右键；供细节预览点击加点/取消用）。</summary>
         public event System.Action<int, bool> CellClicked;
 
@@ -45,6 +49,29 @@ namespace WaveTeam.UI
             RecomputeTailStart();
             ComputeBounds();
             SetVerticesDirty();
+        }
+
+        /// <summary>
+        /// 按音色大类换成对应六边形贴图（贴图只提供形状与边缘设计，明暗仍由顶点色控制）。
+        /// 找不到贴图时退回纯程序化绘制，不会报错。
+        /// </summary>
+        public void SetCategory(HexCategory category)
+        {
+            var sprite = Resources.Load<Sprite>(HexCategoryInfo.ResourcePath(category));
+            _hexSprite = sprite;
+            _hexUv = sprite != null ? HexCategoryInfo.UvRect(category) : new Vector4(0f, 0f, 1f, 1f);
+
+            SetMaterialDirty();   // 让 Graphic 重新按 mainTexture 设置贴图
+            SetVerticesDirty();
+        }
+
+        /// <summary>
+        /// 返回当前贴图，让 Graphic 的渲染流程用它做 _MainTex（MaskableGraphic 默认返回材质的白纹理，
+        /// 直接 SetTexture 会被覆盖，所以必须重写这里）。
+        /// </summary>
+        public override Texture mainTexture
+        {
+            get { return _hexSprite != null ? _hexSprite.texture : base.mainTexture; }
         }
 
         /// <summary>固定格距（1 格 = 相邻六边形中心的水平间距）。板上 = 每拍像素 / HexPerBeat；卡/预览 = 固定值。</summary>
@@ -181,7 +208,7 @@ namespace WaveTeam.UI
                 if (tailFused)
                 {
                     // 已连接：尾巴用融合色画亮（前后角色颜色混合），表示边界打通
-                    DrawHex(vh, c, size * 0.92f * pulse, _tailFuseColor);
+                    DrawHex(vh, c, size * 0.92f * pulse, _tailFuseColor, _hexUv);
                 }
                 else if (locked)
                 {
@@ -189,18 +216,18 @@ namespace WaveTeam.UI
                     var lc = cell.IsRhythm
                         ? new Color(0.42f, 0.44f, 0.52f, 0.50f)   // 未解锁节奏点
                         : new Color(0.42f, 0.44f, 0.52f, 0.22f);  // 未解锁填充
-                    DrawHex(vh, c, size * (cell.IsRhythm ? 0.92f : 0.8f), lc);
+                    DrawHex(vh, c, size * (cell.IsRhythm ? 0.92f : 0.8f), lc, _hexUv);
                 }
                 else if (cell.IsRhythm)
                 {
                     // 光效：先画一圈放大低透明度的 halo，再画实心（重拍用纯白提亮）
                     var halo = new Color(rhythmColor.r, rhythmColor.g, rhythmColor.b, rhythmColor.a * 0.35f);
-                    DrawHex(vh, c, size * 1.30f * pulse, halo);
-                    DrawHex(vh, c, size * pulse, cell.Accent ? Color.white : rhythmColor);
+                    DrawHex(vh, c, size * 1.30f * pulse, halo, _hexUv);
+                    DrawHex(vh, c, size * pulse, cell.Accent ? Color.white : rhythmColor, _hexUv);
                 }
                 else
                 {
-                    DrawHex(vh, c, size * 0.92f * pulse, normalColor); // 略小留缝
+                    DrawHex(vh, c, size * 0.92f * pulse, normalColor, _hexUv); // 略小留缝
                 }
             }
 
@@ -214,7 +241,7 @@ namespace WaveTeam.UI
                 foreach (var h in _bridge)
                 {
                     Vector2 bp = _layout.HexToPixel(h);
-                    DrawHex(vh, new Vector2(bp.x, bp.y + originY), br, bridgeColor);
+                    DrawHex(vh, new Vector2(bp.x, bp.y + originY), br, bridgeColor, _hexUv);
                 }
             }
         }
@@ -243,14 +270,22 @@ namespace WaveTeam.UI
             }
         }
 
-        // 画一个尖顶朝上的实心六边形（中心 + 外接圆半径），从顶点 0 做凸扇形三角剖分
-        private static void DrawHex(VertexHelper vh, Vector2 center, float radius, Color c)
+        // 画一个尖顶朝上的实心六边形（中心 + 外接圆半径），从顶点 0 做凸扇形三角剖分。
+        // uvRect = 贴图里六边形的包围盒；顶点 UV 按单位圆位置映射进去，使贴图正好铺满这个六边形。
+        private static void DrawHex(VertexHelper vh, Vector2 center, float radius, Color c, Vector4 uvRect)
         {
             int s = vh.currentVertCount;
+            float cu = uvRect.x + uvRect.z * 0.5f;
+            float cv = uvRect.y + uvRect.w * 0.5f;
             for (int i = 0; i < 6; i++)
             {
                 float ang = Mathf.Deg2Rad * (60f * i + 30f);
-                vh.AddVert(new Vector3(center.x + radius * Mathf.Cos(ang), center.y + radius * Mathf.Sin(ang), 0f), c, Vector2.zero);
+                float cx = Mathf.Cos(ang);
+                float cy = Mathf.Sin(ang);
+                vh.AddVert(
+                    new Vector3(center.x + radius * cx, center.y + radius * cy, 0f),
+                    c,
+                    new Vector2(cu + uvRect.z * 0.5f * cx, cv + uvRect.w * 0.5f * cy));
             }
             vh.AddTriangle(s, s + 1, s + 2);
             vh.AddTriangle(s, s + 2, s + 3);
