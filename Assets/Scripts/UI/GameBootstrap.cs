@@ -4,6 +4,8 @@ using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using WaveTeam.Audio;
+using WaveTeam.Core;
+using WaveTeam.Room;
 
 namespace WaveTeam.UI
 {
@@ -23,6 +25,9 @@ namespace WaveTeam.UI
 
         private GameObject _roomRoot;   // 排练室入口 UI（「进入音轨板」按钮）
         private GameObject _boardRoot;  // 音轨板 UI 根（进入后所有元素，退出即销毁）
+
+        private NpcInteractor _npcInteractor;    // 挂在 Player 上；跨场景会随之销毁，用「==null」判断重建
+        private CharacterPanel _characterPanel;  // 当前打开的角色信息面板，同一时刻只允许一个
 
         private const string RoomScene = "排练室";
         private static bool _started;
@@ -83,18 +88,56 @@ namespace WaveTeam.UI
             tRt.anchoredPosition = new Vector2(0, -40);
             title.raycastTarget = false;
 
+            // 缩到右下角：房间本身才是这一屏的主体，按钮不该压在地板中间
             var btn = UIFactory.CreateButton("EnterBoard", _roomRoot.transform, "进入音轨板", OnEnterBoard);
             UIStyle.ApplyRound(btn.image, UIStyle.Accent);
-            UIStyle.OutlineText(btn.GetComponentInChildren<Text>());
+            var label = btn.GetComponentInChildren<Text>();
+            label.fontSize = 24;
+            UIStyle.OutlineText(label);
             var bRt = (RectTransform)btn.transform;
-            bRt.anchorMin = bRt.anchorMax = bRt.pivot = new Vector2(0.5f, 0.5f);
-            bRt.sizeDelta = new Vector2(320, 80);
-            bRt.anchoredPosition = Vector2.zero;
+            bRt.anchorMin = bRt.anchorMax = bRt.pivot = new Vector2(1f, 0f);
+            bRt.sizeDelta = new Vector2(180, 52);
+            bRt.anchoredPosition = new Vector2(-24, 24);
+
+            EnsureRoomCharacters();
+        }
+
+        // ---------- 排练室里的角色 ----------
+
+        /// <summary>
+        /// 放入角色并接上互动。GameBootstrap 是跨场景存活的（DontDestroyOnLoad），
+        /// 但角色和 Player 都随场景销毁，所以这里靠「已销毁的 Unity 对象 == null」
+        /// 来判断要不要重建 —— 换个场景回来会自动重来一批，不会叠人。
+        /// </summary>
+        private void EnsureRoomCharacters()
+        {
+            if (_npcInteractor != null) return;
+
+            _npcInteractor = RehearsalRoomSpawner.Spawn();
+            if (_npcInteractor == null) return;
+            _npcInteractor.OnInteract = OpenCharacterPanel;
+        }
+
+        /// <summary>按 F 命中角色时打开信息面板，同时把互动锁住（收提示、停走动、不再响应 F）。</summary>
+        private void OpenCharacterPanel(NpcProfile profile)
+        {
+            if (_characterPanel != null) return;
+            if (_npcInteractor != null) _npcInteractor.SetLocked(true);
+            _characterPanel = CharacterPanel.Open(_canvas.transform, profile, OnCharacterPanelClosed);
+        }
+
+        private void OnCharacterPanelClosed()
+        {
+            _characterPanel = null;
+            if (_npcInteractor != null) _npcInteractor.SetLocked(false);
         }
 
         private void OnEnterBoard()
         {
             if (_roomRoot != null) _roomRoot.SetActive(false);
+            // 音轨板开着的时候不能再让 F 去开角色面板：那边整屏被音轨板盖住，
+            // 玩家看不见是谁被选中，但按 F 仍然会命中最近的角色。
+            if (_npcInteractor != null) _npcInteractor.SetLocked(true);
             BuildBoard();
         }
 
@@ -107,6 +150,7 @@ namespace WaveTeam.UI
             _board = null;
             _sidebar = null;
             _statusText = null;
+            if (_npcInteractor != null) _npcInteractor.SetLocked(false);
             ShowRoomEntry();
         }
 

@@ -9,18 +9,18 @@ namespace WaveTeam.UI
     public static class UIFactory
     {
         /// <summary>
-        /// 内置字体兼容获取：Unity/团结 2022.2+ 为 LegacyRuntime.ttf，2021 为 Arial.ttf。
-        /// 直接用旧名字在 2022.2+ 会抛 ArgumentException，导致整段 UI 创建中断。
+        /// 内置字体兼容获取：2021.x 及更早为 Arial.ttf，Unity/团结 2022.2+ 为 LegacyRuntime.ttf。
+        /// 先试 Arial（2021 直接命中、无报错）；2022.2+ 调 Arial 会抛 ArgumentException，再回落 LegacyRuntime。
         /// </summary>
         public static Font BuiltinFont()
         {
             Font font = null;
-            try { font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"); }
-            catch { /* 旧版本没有这个内置字体 */ }
+            try { font = Resources.GetBuiltinResource<Font>("Arial.ttf"); }
+            catch { /* 2022.2+ 已移除 Arial，会抛异常 */ }
             if (font == null)
             {
-                try { font = Resources.GetBuiltinResource<Font>("Arial.ttf"); }
-                catch { /* 新版本已移除 Arial */ }
+                try { font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"); }
+                catch { /* 理论上不会到这里 */ }
             }
             return font;
         }
