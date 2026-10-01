@@ -27,7 +27,7 @@ namespace WaveTeam.EditorTools
         private const string RoomName = "Room";                 // 生成物的总父节点，重复执行时整体重建
         private const string BackdropAsset = "Assets/Sprites/Room/room_backdrop_anime_v1.png";
         private const string CutoutDir = "Assets/Sprites/Room/CutoutV2/";
-        private const string AutoRunPrefKey = "WaveTeam.RehearsalRoom.Built.v2";
+        private const string AutoRunPrefKey = "WaveTeam.RehearsalRoom.Built.v3";
         private const string VisualName = "Visual";             // Player 下的占位显示子物体
 
         /// <summary>毛坯占位对象：全部删掉，只留 Grid 和 Collision。</summary>
@@ -172,6 +172,7 @@ namespace WaveTeam.EditorTools
             BackupScene();
             RemoveBlockout(grid);
             RebuildCollision(tilemap, tileAsset);
+            int strays = RemoveStrayRoots();
             var root = BuildRoomRoot();
             CreateBackdrop(root.transform);
             PlaceProps(root.transform);
@@ -180,7 +181,8 @@ namespace WaveTeam.EditorTools
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
-            Debug.Log("[排练室] 重建完成：背景 + " + Props.Length + " 件道具 + 碰撞已按新布局重铺。");
+            Debug.Log("[排练室] 重建完成：背景 + " + Props.Length + " 件道具 + 碰撞已按新布局重铺" +
+                      (strays > 0 ? "，并清掉了 " + strays + " 个根节点上的重名副本。" : "。"));
             return true;
         }
 
@@ -248,6 +250,38 @@ namespace WaveTeam.EditorTools
             }
             tilemap.CompressBounds();
             Debug.Log("[排练室] 碰撞图块 " + n + " 块，活动区 x −8~7 / y −5~−1。");
+        }
+
+        /// <summary>
+        /// 清掉手工搭场景时留在**根节点**上的重名副本。
+        ///
+        /// 成因：生成物统一挂在 Room 下，重建时只删 Room 这一个节点。如果之前手工往场景里
+        /// 拖过同名道具（或背景图），它们挂在根节点上，不受影响，于是画面上就是两套叠在一起。
+        /// 这里按名字比对，只清「和生成物重名」的根对象；手工加进来的、不在 Props 名单里的
+        /// 对象（比如额外的 mic_stand）不会被碰。
+        /// </summary>
+        private static int RemoveStrayRoots()
+        {
+            string backdropName = Path.GetFileNameWithoutExtension(BackdropAsset);
+            int removed = 0;
+            foreach (var go in SceneManager.GetActiveScene().GetRootGameObjects())
+            {
+                if (go.name == RoomName) continue;
+                if (go.name == "Backdrop" || go.name == backdropName || IsPropName(go.name))
+                {
+                    Debug.Log("[排练室] 清掉根节点上的重名副本：" + go.name);
+                    Object.DestroyImmediate(go);
+                    removed++;
+                }
+            }
+            return removed;
+        }
+
+        private static bool IsPropName(string name)
+        {
+            for (int i = 0; i < Props.Length; i++)
+                if (Props[i].Name == name) return true;
+            return false;
         }
 
         /// <summary>生成物统一挂在 Room 下，重复执行时先整体删掉旧的，避免越跑越多。</summary>
