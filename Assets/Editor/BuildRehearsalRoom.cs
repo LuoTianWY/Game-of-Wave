@@ -11,26 +11,23 @@ namespace WaveTeam.EditorTools
     /// 把排练室场景从「几何毛坯」重建成真正的排练室：
     /// 删掉色块占位图块 → 挂上拼好的房间背景 → 按位置摆好抠过背景的道具 → 按新布局重铺碰撞。
     ///
-    /// 场景里的房间矩形是世界 x −9.5~8.5、y −6.5~5.5（18×12 单位）。房间背景 RoomBackdrop.png
-    /// 就是按这个矩形拼的（2160×1440 @ 120px/单位），挂在 (−0.5, −0.5) 正好严丝合缝。
+    /// 场景里的房间矩形是世界 x −9.5~8.5、y −6.5~5.5（18×12 单位）。当前背景
+    /// room_backdrop_anime_v1.png 是 2560×1440 @ 120px/单位，挂在 (−0.5, −0.5) 严丝合缝。
     ///
-    /// 背景图上**已经画进去**的东西（换算成世界坐标，摆道具必须避开）：
-    ///   音箱柜   x −9.3 ~ −5.5   y −0.5 ~ 3.3
-    ///   后墙     全宽            y  0.96 ~ 3.3
-    ///   地板     全宽            y −6.5 ~ 0.96
-    ///   麦架     x  4.0 ~  6.6   y −1.4 ~ 3.3
-    ///   靠墙吉他 x  7.9 ~  8.5   y −0.3 ~ 3.5
+    /// 这版背景图上**没有画任何落地家具**——后墙只有海报、挂着的吉他和串灯，地板是干净的。
+    /// 实测墙脚线在图像 row 565，换算成世界坐标 y ≈ 0.79，和道具贴墙用的 BaseY 0.85 正好对上。
+    /// 墙面上半部分（y 2.2 以上）画着两把挂琴和装饰，太高的道具会挡到，摆位时留意。
     ///
-    /// 菜单：波形小队/重建排练室场景    （Ctrl+Shift+R）
+    /// 菜单：波形小队/重建排练室场景（刻意没绑快捷键，原因见 BuildMenu 上方注释）
     /// 首次放进工程时会自动跑一次，之后由上面的菜单手动触发。
     /// </summary>
     public static class BuildRehearsalRoom
     {
         private const string ScenePath = "Assets/Scenes/排练室.unity";
         private const string RoomName = "Room";                 // 生成物的总父节点，重复执行时整体重建
-        private const string BackdropAsset = "Assets/Sprites/Room/RoomBackdrop.png";
-        private const string CutoutDir = "Assets/Sprites/Room/Cutout/";
-        private const string AutoRunPrefKey = "WaveTeam.RehearsalRoom.Built.v1";
+        private const string BackdropAsset = "Assets/Sprites/Room/room_backdrop_anime_v1.png";
+        private const string CutoutDir = "Assets/Sprites/Room/CutoutV2/";
+        private const string AutoRunPrefKey = "WaveTeam.RehearsalRoom.Built.v2";
         private const string VisualName = "Visual";             // Player 下的占位显示子物体
 
         /// <summary>毛坯占位对象：全部删掉，只留 Grid 和 Collision。</summary>
@@ -61,27 +58,31 @@ namespace WaveTeam.EditorTools
         /// </summary>
         private static readonly Prop[] Props =
         {
+            // 位置沿用旧布局（新背景图的墙脚线也在 y≈0.8，对得上），
+            // 但缩放按新素材重算过：新图 PPU 750 / 旧图 1024，像素尺寸也不同，
+            // 这个系数（≈0.7324 × 旧宽/新宽）让每件道具的世界尺寸和原来基本一致。
+            //
             // ---- 后墙排：贴墙的家具与乐器，底边压在墙脚 (y≈0.85) ----
-            new Prop("shelf",            -4.90f, 0.85f, 0.85f),   // 书架
-            new Prop("cabinet",          -3.85f, 0.85f, 0.85f),   // 木柜
-            new Prop("guitar_case",      -2.90f, 0.85f, 0.60f),   // 吉他琴盒
-            new Prop("guitar_electric",  -2.25f, 0.85f, 0.60f),   // 电吉他
-            new Prop("guitar_acoustic",  -1.60f, 0.85f, 0.60f),   // 木吉他
+            new Prop("shelf",            -4.90f, 0.85f, 0.84f),   // 书架
+            new Prop("cabinet",          -3.85f, 0.85f, 0.77f),   // 木柜
+            new Prop("guitar_case",      -2.90f, 0.85f, 0.72f),   // 吉他琴盒
+            new Prop("guitar_electric",  -2.25f, 0.85f, 0.58f),   // 电吉他
+            new Prop("guitar_acoustic",  -1.60f, 0.85f, 0.69f),   // 木吉他
             new Prop("keyboard",         -0.35f, 0.85f, 0.72f),   // 电子琴
-            new Prop("amp",               1.15f, 0.85f, 0.85f),   // 音箱
-            new Prop("drum_kit",          2.75f, 0.85f, 0.95f),   // 架子鼓（排练区核心）
+            new Prop("amp",               1.15f, 0.85f, 0.65f),   // 音箱
+            new Prop("drum_kit",          2.75f, 0.85f, 0.84f),   // 架子鼓（排练区核心）
 
             // ---- 中排：休息/讨论区，底边落在地板上 (y≈−1.9) ----
-            new Prop("sofa",             -6.00f, -1.90f, 0.95f),  // 沙发
+            new Prop("sofa",             -6.00f, -1.90f, 1.12f),  // 沙发
             new Prop("chair",            -3.30f, -1.90f, 0.85f),  // 木椅
-            new Prop("stool",            -1.70f, -1.90f, 0.85f),  // 圆吧凳
-            new Prop("guitar_stand",     -0.10f, -1.90f, 0.85f),  // 折叠琴架
-            new Prop("instrument_case",   1.90f, -1.90f, 0.85f),  // 航空箱
-            new Prop("trash_bin",         3.70f, -1.90f, 0.85f),  // 垃圾桶
+            new Prop("stool",            -1.70f, -1.90f, 0.95f),  // 圆吧凳
+            new Prop("guitar_stand",     -0.10f, -1.90f, 0.90f),  // 折叠琴架
+            new Prop("instrument_case",   1.90f, -1.90f, 0.45f),  // 航空箱（新图是竖着的，按高度配）
+            new Prop("trash_bin",         3.70f, -1.90f, 0.95f),  // 垃圾桶
 
             // ---- 前排：最靠近镜头 (y≈−4.2) ----
-            new Prop("coffee_table",     -6.00f, -4.20f, 0.85f),  // 茶几（摆在沙发正前方）
-            new Prop("bass",             -3.30f, -4.20f, 0.75f),  // 贝斯（横放在地上）
+            new Prop("coffee_table",     -6.00f, -4.20f, 0.77f),  // 茶几（摆在沙发正前方）
+            new Prop("bass",             -3.30f, -4.20f, 0.56f),  // 贝斯（新图是竖着的，按高度配）
         };
 
         // ── 碰撞布局 ──
@@ -325,9 +326,9 @@ namespace WaveTeam.EditorTools
             cam.orthographicSize = 6f;
 
             cam.clearFlags = CameraClearFlags.SolidColor;
-            // rgb(13, 10, 10)，由 Tools/compose_room.py 的 edge_color() 从生成的
-            // RoomBackdrop.png 最外圈实测得到。改动背景图后要重新跑一次脚本对齐这个值。
-            cam.backgroundColor = new Color(13f / 255f, 10f / 255f, 10f / 255f, 1f);
+            // rgb(37, 32, 43)：从当前背景图 room_backdrop_anime_v1.png 最外圈 6 列实测的平均色。
+            // 换背景图之后要重新量一次这个值，否则超宽屏上两边会露出不一样的颜色。
+            cam.backgroundColor = new Color(37f / 255f, 32f / 255f, 43f / 255f, 1f);
         }
 
         /// <summary>
