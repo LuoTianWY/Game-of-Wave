@@ -43,11 +43,18 @@ namespace WaveTeam.EditorTools
             public string Name;    // 对应 Assets/Sprites/Room/Cutout/<Name>.png
             public float X;
             public float BaseY;    // 道具**底边**贴地的世界 y（脚本按精灵高度反推中心点）
-            public float Scale;
+            public float ScaleX;
+            public float ScaleY;
 
-            public Prop(string name, float x, float baseY, float scale)
+            public Prop(string name, float x, float baseY, float scaleX, float scaleY)
             {
-                Name = name; X = x; BaseY = baseY; Scale = scale;
+                Name = name; X = x; BaseY = baseY; ScaleX = scaleX; ScaleY = scaleY;
+            }
+
+            /// <summary>等比缩放的重载，省得每行都写两遍。</summary>
+            public Prop(string name, float x, float baseY, float scale)
+                : this(name, x, baseY, scale, scale)
+            {
             }
         }
 
@@ -58,31 +65,27 @@ namespace WaveTeam.EditorTools
         /// </summary>
         private static readonly Prop[] Props =
         {
-            // 位置沿用旧布局（新背景图的墙脚线也在 y≈0.8，对得上），
-            // 但缩放按新素材重算过：新图 PPU 750 / 旧图 1024，像素尺寸也不同，
-            // 这个系数（≈0.7324 × 旧宽/新宽）让每件道具的世界尺寸和原来基本一致。
-            //
-            // ---- 后墙排：贴墙的家具与乐器，底边压在墙脚 (y≈0.85) ----
-            new Prop("shelf",            -4.90f, 0.85f, 0.84f),   // 书架
-            new Prop("cabinet",          -3.85f, 0.85f, 0.77f),   // 木柜
-            new Prop("guitar_case",      -2.90f, 0.85f, 0.72f),   // 吉他琴盒
-            new Prop("guitar_electric",  -2.25f, 0.85f, 0.58f),   // 电吉他
-            new Prop("guitar_acoustic",  -1.60f, 0.85f, 0.69f),   // 木吉他
-            new Prop("keyboard",         -0.35f, 0.85f, 0.72f),   // 电子琴
-            new Prop("amp",               1.15f, 0.85f, 0.65f),   // 音箱
-            new Prop("drum_kit",          2.75f, 0.85f, 0.84f),   // 架子鼓（排练区核心）
-
-            // ---- 中排：休息/讨论区，底边落在地板上 (y≈−1.9) ----
-            new Prop("sofa",             -6.00f, -1.90f, 1.12f),  // 沙发
-            new Prop("chair",            -3.30f, -1.90f, 0.85f),  // 木椅
-            new Prop("stool",            -1.70f, -1.90f, 0.95f),  // 圆吧凳
-            new Prop("guitar_stand",     -0.10f, -1.90f, 0.90f),  // 折叠琴架
-            new Prop("instrument_case",   1.90f, -1.90f, 0.45f),  // 航空箱（新图是竖着的，按高度配）
-            new Prop("trash_bin",         3.70f, -1.90f, 0.95f),  // 垃圾桶
-
-            // ---- 前排：最靠近镜头 (y≈−4.2) ----
-            new Prop("coffee_table",     -6.00f, -4.20f, 0.77f),  // 茶几（摆在沙发正前方）
-            new Prop("bass",             -3.30f, -4.20f, 0.56f),  // 贝斯（新图是竖着的，按高度配）
+            // 位置和缩放是照 2026-10-01 在 Unity 里手调好的那版誊抄过来的：
+            // X / BaseY 取自场景（BaseY = 物体中心的 y − 精灵高度的一半），
+            // 缩放是非等比的，所以 ScaleX / ScaleY 分开写。
+            // 顺序按 BaseY 从大到小（后 → 前）；实际遮挡由 PlaceProps 按 y 自动算，不依赖顺序。
+            new Prop("cabinet",          5.11f,  0.433f, 1.014f, 1.090f),  // 木柜
+            new Prop("guitar_electric", -1.72f,  0.393f, 1.164f, 1.035f),  // 电吉他
+            new Prop("guitar_acoustic", -0.62f,  0.390f, 1.069f, 1.076f),  // 木吉他
+            new Prop("bass",             0.55f,  0.386f, 1.024f, 1.006f),  // 贝斯
+            new Prop("guitar_case",     -3.90f,  0.373f, 1.366f, 1.140f),  // 吉他琴盒
+            new Prop("shelf",            6.47f,  0.136f, 1.568f, 1.591f),  // 书架
+            new Prop("guitar_stand",     1.76f, -0.040f, 0.900f, 0.900f),  // 折叠琴架
+            new Prop("amp",             -6.71f, -0.365f, 0.928f, 0.888f),  // 音箱
+            new Prop("drum_kit",         3.84f, -0.810f, 1.500f, 1.598f),  // 架子鼓（排练区核心）
+            new Prop("instrument_case",  6.77f, -0.856f, 1.273f, 1.279f),  // 航空箱
+            new Prop("keyboard",        -1.63f, -1.688f, 1.373f, 1.285f),  // 电子琴
+            new Prop("coffee_table",    -4.29f, -1.781f, 1.286f, 1.634f),  // 茶几
+            new Prop("stool",           -6.38f, -2.067f, 0.950f, 0.950f),  // 圆吧凳
+            new Prop("sofa",             5.88f, -2.765f, 2.200f, 1.925f),  // 沙发
+            new Prop("chair",            1.89f, -4.429f, 1.170f, 1.181f),  // 木椅
+            new Prop("mic_stand",       -0.54f, -5.078f, 1.115f, 1.115f),  // 麦克风架
+            new Prop("trash_bin",       -8.00f, -5.436f, 1.169f, 1.110f),  // 垃圾桶
         };
 
         // ── 碰撞布局 ──
@@ -329,10 +332,10 @@ namespace WaveTeam.EditorTools
 
                 var go = new GameObject(p.Name);
                 go.transform.SetParent(holder.transform, false);
-                go.transform.localScale = Vector3.one * p.Scale;
+                go.transform.localScale = new Vector3(p.ScaleX, p.ScaleY, 1f);
 
                 // 精灵轴心在正中，所以中心 = 底边 + 高度的一半（高度已含缩放）
-                float h = sprite.bounds.size.y * p.Scale;
+                float h = sprite.bounds.size.y * p.ScaleY;
                 go.transform.position = new Vector3(p.X, p.BaseY + h * 0.5f, 0f);
 
                 var sr = go.AddComponent<SpriteRenderer>();
