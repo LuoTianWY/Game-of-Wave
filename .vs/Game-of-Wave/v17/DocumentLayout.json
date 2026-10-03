@@ -3,7 +3,31 @@
   "WorkspaceRootPath": "C:\\Users\\Yuan Zhong\\Documents\\GitHub\\Game-of-Wave\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{EFBAE957-4B2C-9D93-1E6F-67E92EDF268A}|Assembly-CSharp.csproj|c:\\users\\yuan zhong\\documents\\github\\game-of-wave\\assets\\scenes\\script\\playermovement.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{EFBAE957-4B2C-9D93-1E6F-67E92EDF268A}|Assembly-CSharp.csproj|c:\\users\\yuan zhong\\documents\\github\\game-of-wave\\assets\\scripts\\ui\\gamebootstrap.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{EFBAE957-4B2C-9D93-1E6F-67E92EDF268A}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\ui\\gamebootstrap.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{EFBAE957-4B2C-9D93-1E6F-67E92EDF268A}|Assembly-CSharp.csproj|c:\\users\\yuan zhong\\documents\\github\\game-of-wave\\assets\\scripts\\ui\\pixeltext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{EFBAE957-4B2C-9D93-1E6F-67E92EDF268A}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\ui\\pixeltext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{EFBAE957-4B2C-9D93-1E6F-67E92EDF268A}|Assembly-CSharp.csproj|C:\\Users\\Yuan Zhong\\Documents\\GitHub\\Game-of-Wave\\assets\\scripts\\ui\\characterpanel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{EFBAE957-4B2C-9D93-1E6F-67E92EDF268A}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\ui\\characterpanel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{EFBAE957-4B2C-9D93-1E6F-67E92EDF268A}|Assembly-CSharp.csproj|C:\\Users\\Yuan Zhong\\Documents\\GitHub\\Game-of-Wave\\assets\\scripts\\core\\npcprofile.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{EFBAE957-4B2C-9D93-1E6F-67E92EDF268A}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\core\\npcprofile.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{EFBAE957-4B2C-9D93-1E6F-67E92EDF268A}|Assembly-CSharp.csproj|C:\\Users\\Yuan Zhong\\Documents\\GitHub\\Game-of-Wave\\assets\\scripts\\room\\npcinteractor.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{EFBAE957-4B2C-9D93-1E6F-67E92EDF268A}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\room\\npcinteractor.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{EFBAE957-4B2C-9D93-1E6F-67E92EDF268A}|Assembly-CSharp.csproj|C:\\Users\\Yuan Zhong\\Documents\\GitHub\\Game-of-Wave\\assets\\scripts\\room\\npcactor.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{EFBAE957-4B2C-9D93-1E6F-67E92EDF268A}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\room\\npcactor.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{EFBAE957-4B2C-9D93-1E6F-67E92EDF268A}|Assembly-CSharp.csproj|C:\\Users\\Yuan Zhong\\Documents\\GitHub\\Game-of-Wave\\assets\\scenes\\script\\playermovement.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{EFBAE957-4B2C-9D93-1E6F-67E92EDF268A}|Assembly-CSharp.csproj|solutionrelative:assets\\scenes\\script\\playermovement.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
@@ -14,11 +38,86 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 0,
+          "SelectedChildIndex": 3,
           "Children": [
             {
               "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "PixelText.cs",
+              "DocumentMoniker": "C:\\Users\\Yuan Zhong\\Documents\\GitHub\\Game-of-Wave\\Assets\\Scripts\\UI\\PixelText.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\UI\\PixelText.cs",
+              "ToolTip": "C:\\Users\\Yuan Zhong\\Documents\\GitHub\\Game-of-Wave\\Assets\\Scripts\\UI\\PixelText.cs",
+              "RelativeToolTip": "Assets\\Scripts\\UI\\PixelText.cs",
+              "ViewState": "AQIAAEYBAAAAAAAAAAAAAEsBAAAAAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-10-03T15:57:54.529Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "CharacterPanel.cs",
+              "DocumentMoniker": "C:\\Users\\Yuan Zhong\\Documents\\GitHub\\Game-of-Wave\\Assets\\Scripts\\UI\\CharacterPanel.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\UI\\CharacterPanel.cs",
+              "ToolTip": "C:\\Users\\Yuan Zhong\\Documents\\GitHub\\Game-of-Wave\\Assets\\Scripts\\UI\\CharacterPanel.cs",
+              "RelativeToolTip": "Assets\\Scripts\\UI\\CharacterPanel.cs",
+              "ViewState": "AQIAANgAAAAAAAAAAAAAAOkAAAAAAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-10-03T11:11:19.399Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "NpcProfile.cs",
+              "DocumentMoniker": "C:\\Users\\Yuan Zhong\\Documents\\GitHub\\Game-of-Wave\\Assets\\Scripts\\Core\\NpcProfile.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Core\\NpcProfile.cs",
+              "ToolTip": "C:\\Users\\Yuan Zhong\\Documents\\GitHub\\Game-of-Wave\\Assets\\Scripts\\Core\\NpcProfile.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Core\\NpcProfile.cs",
+              "ViewState": "AQIAABwAAAAAAAAAAAA1wEIAAAA7AAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-10-03T10:56:34.911Z"
+            },
+            {
+              "$type": "Document",
               "DocumentIndex": 0,
+              "Title": "GameBootstrap.cs",
+              "DocumentMoniker": "C:\\Users\\Yuan Zhong\\Documents\\GitHub\\Game-of-Wave\\Assets\\Scripts\\UI\\GameBootstrap.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\UI\\GameBootstrap.cs",
+              "ToolTip": "C:\\Users\\Yuan Zhong\\Documents\\GitHub\\Game-of-Wave\\Assets\\Scripts\\UI\\GameBootstrap.cs",
+              "RelativeToolTip": "Assets\\Scripts\\UI\\GameBootstrap.cs",
+              "ViewState": "AQIAAMUAAAAAAAAAAAASwOAAAAAJAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-10-03T10:55:21.479Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "NpcInteractor.cs",
+              "DocumentMoniker": "C:\\Users\\Yuan Zhong\\Documents\\GitHub\\Game-of-Wave\\Assets\\Scripts\\Room\\NpcInteractor.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Room\\NpcInteractor.cs",
+              "ToolTip": "C:\\Users\\Yuan Zhong\\Documents\\GitHub\\Game-of-Wave\\Assets\\Scripts\\Room\\NpcInteractor.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Room\\NpcInteractor.cs",
+              "ViewState": "AQIAADoAAAAAAAAAAIBJwGIAAAABAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-10-03T10:53:11.32Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "NpcActor.cs",
+              "DocumentMoniker": "C:\\Users\\Yuan Zhong\\Documents\\GitHub\\Game-of-Wave\\Assets\\Scripts\\Room\\NpcActor.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Room\\NpcActor.cs",
+              "ToolTip": "C:\\Users\\Yuan Zhong\\Documents\\GitHub\\Game-of-Wave\\Assets\\Scripts\\Room\\NpcActor.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Room\\NpcActor.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-10-03T10:52:21.48Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
               "Title": "PlayerMovement.cs",
               "DocumentMoniker": "C:\\Users\\Yuan Zhong\\Documents\\GitHub\\Game-of-Wave\\Assets\\Scenes\\Script\\PlayerMovement.cs",
               "RelativeDocumentMoniker": "Assets\\Scenes\\Script\\PlayerMovement.cs",
@@ -26,8 +125,7 @@
               "RelativeToolTip": "Assets\\Scenes\\Script\\PlayerMovement.cs",
               "ViewState": "AQIAAAAAAAAAAAAAAAAAAAQAAAAbAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-24T21:25:03.775Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-09-24T21:25:03.775Z"
             }
           ]
         }

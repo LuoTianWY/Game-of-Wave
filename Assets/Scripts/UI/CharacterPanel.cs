@@ -32,12 +32,13 @@ namespace WaveTeam.UI
         private const int ValueWrapChars = 12;
 
         private System.Action _onClose;
+        private System.Action<NpcProfile> _onTalk;
         private bool _closing;
 
         public NpcProfile Profile { get; private set; }
 
         /// <summary>建出面板并显示。parent 一般是 GameBootstrap 的那张 Canvas。</summary>
-        public static CharacterPanel Open(Transform parent, NpcProfile profile, System.Action onClose)
+        public static CharacterPanel Open(Transform parent, NpcProfile profile, System.Action onClose, System.Action<NpcProfile> onTalk)
         {
             var go = new GameObject("CharacterPanel", typeof(RectTransform), typeof(Image));
             go.transform.SetParent(parent, false);
@@ -45,6 +46,7 @@ namespace WaveTeam.UI
 
             var panel = go.AddComponent<CharacterPanel>();
             panel._onClose = onClose;
+            panel._onTalk = onTalk;
             panel.Profile = profile;
             panel.Build(profile);
             return panel;
@@ -153,24 +155,47 @@ namespace WaveTeam.UI
         private void BuildActions(Transform box)
         {
             float x = 44f;
+
             foreach (var label in NpcRoster.ActionPlaceholders)
             {
-                string act = label;      // 显式拷一份给闭包，避免捕获到循环变量
-                MakeButton(box, "Act_" + label, label, new Vector2(160f, 56f),
-                           new Vector2(0f, 0f), new Vector2(x, 40f),
+                string act = label;
+
+                System.Action action;
+
+                if (act == "聊天")
+                    action = ShowDialogue;
+                else
+                    action = () => OnPlaceholderAction(act);
+
+                MakeButton(box, "Act_" + label, label,
+                           new Vector2(160f, 56f),
+                           new Vector2(0f, 0f),
+                           new Vector2(x, 40f),
                            new Color(0.22f, 0.27f, 0.40f),
-                           () => OnPlaceholderAction(act));
+                           action);
+
                 x += 180f;
             }
 
-            MakeButton(box, "Close", "关闭", new Vector2(170f, 56f),
-                       new Vector2(1f, 0f), new Vector2(-44f, 40f),
-                       new Color(0.72f, 0.32f, 0.32f), Close);
+            MakeButton(box, "Close", "关闭",
+                       new Vector2(170f, 56f),
+                       new Vector2(1f, 0f),
+                       new Vector2(-44f, 40f),
+                       new Color(0.72f, 0.32f, 0.32f),
+                       Close);
 
-            var hint = PixelText.Create("EscHint", box, "Esc 关闭", 1.4f,
-                                        new Color(0.50f, 0.55f, 0.68f));
-            UIFactory.Place((RectTransform)hint.transform, new Vector2(1f, 0f),
-                            hint.PreferredSize, new Vector2(-224f, 56f));
+            var hint = PixelText.Create(
+                "EscHint",
+                box,
+                "Esc 关闭",
+                1.4f,
+                new Color(0.50f, 0.55f, 0.68f));
+
+            UIFactory.Place(
+                (RectTransform)hint.transform,
+                new Vector2(1f, 0f),
+                hint.PreferredSize,
+                new Vector2(-224f, 56f));
         }
 
         /// <summary>
@@ -211,6 +236,64 @@ namespace WaveTeam.UI
         /// 功能按钮还没设计，先用日志明确回应一下 —— 点了完全没动静
         /// 会被当成「按钮坏了」，有行日志至少说明点击是通的。
         /// </summary>
+        private void ShowDialogue()
+        {
+            if (Profile == null) return;
+            if (_onTalk != null)
+                _onTalk(Profile);
+
+            var dialogueBox = UIFactory.CreatePanel(
+                "DialogueBox",
+                transform,
+                new Color(0.07f, 0.09f, 0.15f, 0.98f));
+
+            dialogueBox.raycastTarget = true;
+
+            UIFactory.Place(
+                (RectTransform)dialogueBox.transform,
+                new Vector2(0.5f, 0.5f),
+                new Vector2(900f, 360f),
+                Vector2.zero);
+
+            // NPC 名字
+            var name = PixelText.Create(
+                "SpeakerName",
+                dialogueBox.transform,
+                Profile.Name,
+                2.5f,
+                new Color(1f, 0.88f, 0.42f));
+
+            UIFactory.Place(
+                (RectTransform)name.transform,
+                new Vector2(0f, 1f),
+                name.PreferredSize,
+                new Vector2(40f, -35f));
+
+            // 对话正文
+            var dialogue = PixelText.Create(
+                "Dialogue",
+                dialogueBox.transform,
+                Wrap(Profile.Dialogue, 20),
+                TextScale,
+                Color.white);
+
+            UIFactory.Place(
+                (RectTransform)dialogue.transform,
+                new Vector2(0f, 1f),
+                dialogue.PreferredSize,
+                new Vector2(40f, -110f));
+
+            // 返回按钮
+            MakeButton(
+                dialogueBox.transform,
+                "Back",
+                "返回",
+                new Vector2(160f, 56f),
+                new Vector2(1f, 0f),
+                new Vector2(-40f, 30f),
+                new Color(0.22f, 0.27f, 0.40f),
+                () => Destroy(dialogueBox.gameObject));
+        }
         private void OnPlaceholderAction(string label)
         {
             Debug.Log("[角色面板]「" + label + "」是占位按钮，功能未实现。作用对象：" +

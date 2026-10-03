@@ -1,4 +1,5 @@
 using System.IO;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
@@ -28,6 +29,11 @@ namespace WaveTeam.UI
 
         private NpcInteractor _npcInteractor;    // 挂在 Player 上；跨场景会随之销毁，用「==null」判断重建
         private CharacterPanel _characterPanel;  // 当前打开的角色信息面板，同一时刻只允许一个
+
+        private GameObject _objectiveRoot;
+        private PixelText _objectiveText;
+
+        private readonly HashSet<string> _talkedNpcs = new HashSet<string>();
 
         private const string RoomScene = "排练室";
         private static bool _started;
@@ -100,7 +106,66 @@ namespace WaveTeam.UI
             bRt.anchoredPosition = new Vector2(-24, 24);
 
             EnsureRoomCharacters();
+            BuildObjectiveUI();
         }
+
+
+
+        private void BuildObjectiveUI()
+        {
+            if (_objectiveRoot != null) return;
+
+            _objectiveRoot = new GameObject(
+                "ObjectiveUI",
+                typeof(RectTransform));
+
+            _objectiveRoot.transform.SetParent(
+                _canvas.transform,
+                false);
+
+            var rt = (RectTransform)_objectiveRoot.transform;
+
+            rt.anchorMin = rt.anchorMax = rt.pivot =
+                new Vector2(0f, 1f);
+
+            rt.sizeDelta = new Vector2(420f, 240f);
+            rt.anchoredPosition = new Vector2(30f, -30f);
+
+            var bg = UIFactory.CreatePanel(
+                "Background",
+                _objectiveRoot.transform,
+                new Color(0.05f, 0.07f, 0.12f, 0.82f));
+
+            UIFactory.Stretch((RectTransform)bg.transform);
+
+            var title = PixelText.Create(
+                "Title",
+                _objectiveRoot.transform,
+                "排练准备",
+                2f,
+                new Color(1f, 0.88f, 0.42f));
+
+            UIFactory.Place(
+                (RectTransform)title.transform,
+                new Vector2(0f, 1f),
+                title.PreferredSize,
+                new Vector2(20f, -20f));
+
+            _objectiveText = PixelText.Create(
+                "Objectives",
+                _objectiveRoot.transform,
+                "□ 和阿宁聊天\n□ 和小川聊天\n□ 和石头聊天\n□ 开始排练",
+                1.5f,
+                Color.white);
+
+            UIFactory.Place(
+                (RectTransform)_objectiveText.transform,
+                new Vector2(0f, 1f),
+                _objectiveText.PreferredSize,
+                new Vector2(20f, -75f));
+        }
+
+
 
         // ---------- 排练室里的角色 ----------
 
@@ -122,10 +187,42 @@ namespace WaveTeam.UI
         private void OpenCharacterPanel(NpcProfile profile)
         {
             if (_characterPanel != null) return;
-            if (_npcInteractor != null) _npcInteractor.SetLocked(true);
-            _characterPanel = CharacterPanel.Open(_canvas.transform, profile, OnCharacterPanelClosed);
+
+            if (_npcInteractor != null)
+                _npcInteractor.SetLocked(true);
+
+            _characterPanel = CharacterPanel.Open(
+                _canvas.transform,
+                profile,
+                OnCharacterPanelClosed,
+                OnNpcTalked);
         }
 
+        private void OnNpcTalked(NpcProfile profile)
+        {
+            if (profile == null) return;
+
+            _talkedNpcs.Add(profile.Name);
+
+            RefreshObjectiveUI();
+        }
+
+        private void RefreshObjectiveUI()
+        {
+            if (_objectiveText == null) return;
+
+            bool aning = _talkedNpcs.Contains("阿宁");
+            bool xiaochuan = _talkedNpcs.Contains("小川");
+            bool shitou = _talkedNpcs.Contains("石头");
+
+            bool allTalked = aning && xiaochuan && shitou;
+
+            _objectiveText.Text =
+                (aning ? "[X]" : "[ ]") + " 和阿宁聊天\n" +
+                (xiaochuan ? "[X]" : "[ ]") + " 和小川聊天\n" +
+                (shitou ? "[X]" : "[ ]") + " 和石头聊天\n" +
+                (allTalked ? "[X]" : "[ ]") + " 开始排练";
+        }
         private void OnCharacterPanelClosed()
         {
             _characterPanel = null;

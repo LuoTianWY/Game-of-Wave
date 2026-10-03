@@ -13,14 +13,16 @@ namespace WaveTeam.Core
         public readonly int Level;                // 等级
         public readonly WaveformType Waveform;    // 目前波形（= 音色）
         public readonly string Task;              // 正在进行的任务
+        public readonly string Dialogue;
 
-        public NpcProfile(string name, Trait trait, int level, WaveformType waveform, string task)
+        public NpcProfile(string name, Trait trait, int level, WaveformType waveform, string task, string dialogue)
         {
             Name = name;
             Trait = trait;
             Level = level;
             Waveform = waveform;
             Task = task;
+            Dialogue = dialogue;
         }
 
         /// <summary>波形的静态定义（乐器名 + 性格名词 + 形状参数）。</summary>
@@ -54,12 +56,12 @@ namespace WaveTeam.Core
     {
         public static readonly IReadOnlyList<NpcProfile> All = new List<NpcProfile>
         {
-            new NpcProfile("阿宁",     Trait.Calm,      12, WaveformType.Kick,   "给底鼓找一段稳得住的开场"),
-            new NpcProfile("小川",     Trait.Flexible,   7, WaveformType.HiHat,  "试着把踩镲的密度再推一档"),
-            new NpcProfile("老周",     Trait.Stubborn,  18, WaveformType.Tom,    "守着通鼓的老节奏，不肯改"),
-            new NpcProfile("石头",     Trait.Impatient,  5, WaveformType.Snare,  "想在四拍里塞进更多军鼓"),
-            new NpcProfile("小雨",     Trait.Flexible,   9, WaveformType.Shaker, "找一种更细碎的沙锤颗粒"),
-            new NpcProfile("神秘嘉宾", Trait.Calm,      30, WaveformType.Crash,  "还没透露这次要打什么"),
+            new NpcProfile("阿宁",     Trait.Calm,      12, WaveformType.Kick,   "给底鼓找一段稳得住的开场","开场还是有点乱。我觉得底鼓应该先把节奏稳住。"),
+            new NpcProfile("小川",     Trait.Flexible,   7, WaveformType.HiHat,  "试着把踩镲的密度再推一档","踩镲可以再密一点，也许这样整首歌会更有推动感。"),
+            new NpcProfile("老周",     Trait.Stubborn,  18, WaveformType.Tom,    "守着通鼓的老节奏，不肯改","我还是觉得原来的通鼓节奏最好，没必要为了别人一直改。"),
+            new NpcProfile("石头",     Trait.Impatient,  5, WaveformType.Snare,  "想在四拍里塞进更多军鼓", "现在太慢了！我想多加几个军鼓，让这段更有冲击力。"),
+            new NpcProfile("小雨",     Trait.Flexible,   9, WaveformType.Shaker, "找一种更细碎的沙锤颗粒","我想让沙锤轻一点，不抢其他人的声音，但又不能完全听不见。"),
+            new NpcProfile("神秘嘉宾", Trait.Calm,      30, WaveformType.Crash,  "还没透露这次要打什么","先听听其他人的想法吧。真正重要的，也许不是谁的声音最大。"),
         };
 
         /// <summary>面板右上角那几个功能按钮的占位文案（功能本身还没设计）。</summary>
