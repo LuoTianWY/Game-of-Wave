@@ -65,27 +65,28 @@ namespace WaveTeam.EditorTools
         /// </summary>
         private static readonly Prop[] Props =
         {
-            // 位置和缩放是照 2026-10-01 在 Unity 里手调好的那版誊抄过来的：
-            // X / BaseY 取自场景（BaseY = 物体中心的 y − 精灵高度的一半），
-            // 缩放是非等比的，所以 ScaleX / ScaleY 分开写。
+            // 位置和缩放取自组员提交的场景（0232de2），是直接读 排练室.unity 誊出来的原值，
+            // 不再另行手改。BaseY = 物体中心的 y − 精灵高度的一半，和 PlaceProps 的算法互逆，
+            // 所以这一组数字重建出来的结果和场景逐像素一致。
             // 顺序按 BaseY 从大到小（后 → 前）；实际遮挡由 PlaceProps 按 y 自动算，不依赖顺序。
-            new Prop("cabinet",          5.11f,  0.433f, 1.014f, 1.090f),  // 木柜
+            new Prop("keyboard",         1.89f,  0.762f, 1.373f, 1.285f),  // 电子琴
+            new Prop("cabinet",          4.46f,  0.433f, 1.014f, 1.090f),  // 木柜
             new Prop("guitar_electric", -1.72f,  0.393f, 1.164f, 1.035f),  // 电吉他
             new Prop("guitar_acoustic", -0.62f,  0.390f, 1.069f, 1.076f),  // 木吉他
             new Prop("bass",             0.55f,  0.386f, 1.024f, 1.006f),  // 贝斯
             new Prop("guitar_case",     -3.90f,  0.373f, 1.366f, 1.140f),  // 吉他琴盒
             new Prop("shelf",            6.47f,  0.136f, 1.568f, 1.591f),  // 书架
             new Prop("guitar_stand",     1.76f, -0.040f, 0.900f, 0.900f),  // 折叠琴架
-            new Prop("amp",             -6.71f, -0.365f, 0.928f, 0.888f),  // 音箱
-            new Prop("drum_kit",         3.84f, -0.810f, 1.500f, 1.598f),  // 架子鼓（排练区核心）
+            new Prop("sofa",            -7.08f, -0.676f, 2.134f, 1.964f),  // 沙发
             new Prop("instrument_case",  6.77f, -0.856f, 1.273f, 1.279f),  // 航空箱
-            new Prop("keyboard",        -1.63f, -1.688f, 1.373f, 1.285f),  // 电子琴
-            new Prop("coffee_table",    -4.29f, -1.781f, 1.286f, 1.634f),  // 茶几
-            new Prop("stool",           -6.38f, -2.067f, 0.950f, 0.950f),  // 圆吧凳
-            new Prop("sofa",             5.88f, -2.765f, 2.200f, 1.925f),  // 沙发
-            new Prop("chair",            1.89f, -4.429f, 1.170f, 1.181f),  // 木椅
-            new Prop("mic_stand",       -0.54f, -5.078f, 1.115f, 1.115f),  // 麦克风架
-            new Prop("trash_bin",       -8.00f, -5.436f, 1.169f, 1.110f),  // 垃圾桶
+            new Prop("amp",             -4.54f, -1.211f, 0.928f, 0.888f),  // 音箱
+            new Prop("drum_kit",         1.41f, -1.590f, 1.500f, 1.598f),  // 架子鼓（排练区核心）
+            new Prop("stool",           -0.97f, -1.667f, 0.950f, 0.950f),  // 圆吧凳
+            new Prop("mic_stand",       -1.12f, -2.467f, 1.115f, 1.115f),  // 麦克风架
+            new Prop("chair",           -2.78f, -5.009f, 1.170f, 1.181f),  // 木椅
+            new Prop("chair",           -6.95f, -5.139f, 1.170f, 1.181f),  // 木椅（第二把，场景里显示为 chair (1)）
+            new Prop("coffee_table",    -4.88f, -5.421f, 1.868f, 2.160f),  // 茶几
+            new Prop("trash_bin",        7.87f, -5.571f, 1.169f, 1.110f),  // 垃圾桶
         };
 
         // ── 碰撞布局 ──
