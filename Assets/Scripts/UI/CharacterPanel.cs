@@ -5,7 +5,7 @@ using WaveTeam.Core;
 namespace WaveTeam.UI
 {
     /// <summary>
-    /// 角色信息面板：左边放大版人物（同样是方块占位，比例和场景里那个一致），
+    /// 角色信息面板：左边放大版人物立绘（没有立绘时回退到方块占位），
     /// 右边依次是 性格 / 等级 / 目前波形 / 正在进行的任务，底部一排功能按钮（占位）。
     ///
     /// 关闭方式给了三个：右下角「关闭」按钮、Esc、点面板外的暗底。
@@ -96,8 +96,10 @@ namespace WaveTeam.UI
         }
 
         /// <summary>
-        /// 放大版人物：和 NpcActor 用同一套「身 + 头」比例（头宽 / 身宽 = 0.44/0.62 = 0.71），
-        /// 换到 UI 上就是两个 Image，免得面板里的人和一场景里的人长得不一样。
+        /// 放大版人物：优先用真实立绘（Assets/Resources/Characters/Portraits/），
+        /// 立绘是 170×200 的像素图，铺到这个 340×400 的框里正好 2 倍点对点放大。
+        /// 取不到立绘时回退到和 NpcActor 同一套「身 + 头」比例的方块占位，
+        /// 免得面板空着。
         /// </summary>
         private void BuildPortrait(Transform box, NpcProfile p)
         {
@@ -106,15 +108,46 @@ namespace WaveTeam.UI
             var frameRt = (RectTransform)frame.transform;
             UIFactory.Place(frameRt, new Vector2(0f, 1f), new Vector2(340f, 400f), new Vector2(40f, -140f));
 
+            var sprite = UIResource.Load(PortraitPath(p));
+            if (sprite != null)
+            {
+                var art = new GameObject("Art", typeof(RectTransform), typeof(Image));
+                art.transform.SetParent(frameRt, false);
+                var img = art.GetComponent<Image>();
+                img.raycastTarget = false;
+                img.sprite = sprite;
+                img.color = Color.white;
+                UIFactory.Place((RectTransform)art.transform, new Vector2(0f, 1f),
+                                new Vector2(340f, 400f), Vector2.zero);
+                return;
+            }
+
             var c = TraitColor.Of(p.Trait);
             AddBlock(frameRt, "Body", new Vector2(120f, 210f), new Vector2(0f, 40f), c);
             AddBlock(frameRt, "Head", new Vector2(86f, 86f), new Vector2(0f, 250f), Lighten(c, 0.25f));
 
-            // 素材注释：这几个方块以后会被真正的人物立绘替换掉
             var hint = PixelText.Create("Hint", frameRt, "放大人物素材（占位）", 1.4f,
                                         new Color(0.55f, 0.60f, 0.72f), PixelText.Align.Center);
             UIFactory.Place((RectTransform)hint.transform, new Vector2(0.5f, 0f),
                             hint.PreferredSize, new Vector2(0f, 10f));
+        }
+
+        /// <summary>
+        /// 角色名 → 立绘资源路径（相对 Assets/Resources/，不带扩展名）。
+        /// 文件名用拼音，避免中文路径在某些平台上出问题。
+        /// </summary>
+        private static string PortraitPath(NpcProfile p)
+        {
+            switch (p.Name)
+            {
+                case "阿宁": return "Characters/Portraits/aning";
+                case "小川": return "Characters/Portraits/xiaochuan";
+                case "老周": return "Characters/Portraits/laozhou";
+                case "小雨": return "Characters/Portraits/xiaoyu";
+                case "石头": return "Characters/Portraits/shitou";
+                case "神秘嘉宾": return "Characters/Portraits/guest";
+                default: return null;
+            }
         }
 
         private static void AddBlock(Transform parent, string name, Vector2 size, Vector2 pos, Color color)
