@@ -22,7 +22,7 @@ namespace WaveTeam.UI
         private Canvas _canvas;
         private PerformancePlayer _perf;
         private BgmPlayer _bgm;
-        private Text _statusText;
+        private PixelText _statusText;
 
         private GameObject _roomRoot;   // 排练室入口 UI（「进入音轨板」按钮）
         private GameObject _boardRoot;  // 音轨板 UI 根（进入后所有元素，退出即销毁）
@@ -85,24 +85,18 @@ namespace WaveTeam.UI
             _roomRoot.transform.SetParent(_canvas.transform, false);
             UIFactory.Stretch((RectTransform)_roomRoot.transform);
 
-            var title = UIFactory.CreateText("Title", _roomRoot.transform, "排练室", 48,
-                UIStyle.Text, TextAnchor.MiddleCenter);
-            UIStyle.OutlineText(title);
-            var tRt = (RectTransform)title.transform;
-            tRt.anchorMin = tRt.anchorMax = tRt.pivot = new Vector2(0.5f, 1f);
-            tRt.sizeDelta = new Vector2(600, 64);
-            tRt.anchoredPosition = new Vector2(0, -40);
+            var title = UIFactory.PlacePixelText("Title", _roomRoot.transform, "排练室", 4f,
+                UIStyle.Text, PixelText.Align.Center,
+                new Vector2(0.5f, 1f), new Vector2(0, -34));
             title.raycastTarget = false;
 
             // 缩到右下角：房间本身才是这一屏的主体，按钮不该压在地板中间
-            var btn = UIFactory.CreateButton("EnterBoard", _roomRoot.transform, "进入音轨板", OnEnterBoard);
-            UIStyle.ApplyRound(btn.image, UIStyle.Accent);
-            var label = btn.GetComponentInChildren<Text>();
-            label.fontSize = 24;
-            UIStyle.OutlineText(label);
+            var btn = UIFactory.CreatePixelButton("EnterBoard", _roomRoot.transform, "进入音轨板", 1.8f,
+                UIStyle.Accent, UIStyle.Ink, OnEnterBoard);
+            UIResource.ApplyFrameOrColor(btn.image, "UI/btn_play", UIStyle.Accent);
             var bRt = (RectTransform)btn.transform;
             bRt.anchorMin = bRt.anchorMax = bRt.pivot = new Vector2(1f, 0f);
-            bRt.sizeDelta = new Vector2(180, 52);
+            bRt.sizeDelta = new Vector2(200, 56);
             bRt.anchoredPosition = new Vector2(-24, 24);
 
             EnsureRoomCharacters();
@@ -134,7 +128,7 @@ namespace WaveTeam.UI
             var bg = UIFactory.CreatePanel(
                 "Background",
                 _objectiveRoot.transform,
-                new Color(0.05f, 0.07f, 0.12f, 0.82f));
+                new Color(UIStyle.BgDeep.r, UIStyle.BgDeep.g, UIStyle.BgDeep.b, 0.84f));
 
             UIFactory.Stretch((RectTransform)bg.transform);
 
@@ -143,7 +137,7 @@ namespace WaveTeam.UI
                 _objectiveRoot.transform,
                 "排练准备",
                 2f,
-                new Color(1f, 0.88f, 0.42f));
+                UIStyle.Accent);
 
             UIFactory.Place(
                 (RectTransform)title.transform,
@@ -265,6 +259,7 @@ namespace WaveTeam.UI
             var bg = UIFactory.CreatePanel("Background", _boardRoot.transform, UIStyle.BgDeep);
             bg.raycastTarget = false;
             UIFactory.Stretch((RectTransform)bg.transform);
+            UIResource.ApplySpriteOrColor(bg, "UI/bg_canvas", UIStyle.BgDeep);
 
             _board = DrumTrackBoard.Create(_boardRoot.transform);
             _sidebar = RosterSidebar.Create(_boardRoot.transform);
@@ -280,21 +275,17 @@ namespace WaveTeam.UI
                 _sidebar.Populate(characters);
                 Debug.Log("[波形小队] 已加载鼓音色 " + samples.Count + " 个，随机分队 " + characters.Count + " 名角色");
 
+                // 落点虚影要排除右侧栏：拖回侧栏时不显示虚影、也不落位
+                _board.IsDropBlocked = pos =>
+                    RectTransformUtility.RectangleContainsScreenPoint(_sidebar.Rect, pos, null);
                 foreach (var card in _sidebar.Cards)
-                    card.OnDragEnd = (c, pos) => TryDrop(c, pos);
+                    _board.WireCard(card);
             }
 
             BuildPlayback();
 
             if (samples.Count == 0)
-                _statusText.text = "未找到鼓音色：请把 ogg 放进 Assets/Resources/Audio/drums（见波形映射表.md）";
-        }
-
-        private bool TryDrop(DrumCharacterCard card, Vector2 screenPos)
-        {
-            if (RectTransformUtility.RectangleContainsScreenPoint(_sidebar.Rect, screenPos, null))
-                return false;
-            return _board.TryPlaceFromCard(card, screenPos);
+                _statusText.Text = "未找到鼓音色：请把 ogg 放进 Assets/Resources/Audio/drums（见波形映射表.md）";
         }
 
         private static Canvas BuildCanvas()
@@ -311,14 +302,22 @@ namespace WaveTeam.UI
 
         private void BuildPlayback()
         {
-            _statusText = UIFactory.CreateText("Status", _boardRoot.transform,
-                "把右侧角色拖到鼓轨上（同轨不重叠）· 左键拖动移动 · 右键收回", 26,
-                UIStyle.Text, TextAnchor.MiddleCenter);
-            UIStyle.OutlineText(_statusText);
-            var stRt = (RectTransform)_statusText.transform;
-            stRt.anchorMin = stRt.anchorMax = stRt.pivot = new Vector2(0.5f, 1f);
-            stRt.sizeDelta = new Vector2(1400, 40);
-            stRt.anchoredPosition = new Vector2(0, -20);
+            // 顶部提示条：一条木头条 + 居中像素字（原来是直接浮在背景上的系统字）
+            var header = UIFactory.CreatePanel("Header", _boardRoot.transform, UIStyle.Stage);
+            header.raycastTarget = false;
+            UIResource.ApplyFrameOrColor(header, "UI/header", UIStyle.Stage);
+            var hRt = (RectTransform)header.transform;
+            hRt.anchorMin = new Vector2(0f, 1f);
+            hRt.anchorMax = new Vector2(1f, 1f);
+            hRt.pivot = new Vector2(0.5f, 1f);
+            // 宽度要扣掉右侧角色栏那 320px，否则顶栏会盖住侧栏的「角色」标题
+            hRt.sizeDelta = new Vector2(-RosterSidebar.PanelWidth, HeaderHeight);
+            hRt.anchoredPosition = Vector2.zero;
+
+            _statusText = UIFactory.PlacePixelText("Status", _boardRoot.transform,
+                "把右侧角色拖到鼓轨上（同轨不重叠）· 左键拖动移动 · 右键收回", 2f,
+                UIStyle.Text, PixelText.Align.Center,
+                new Vector2(0.5f, 1f), new Vector2(0f, -24f));
             _statusText.raycastTarget = false;
 
             // BGM / 演出播放器跨「进入-退出」复用，避免重复 AddComponent 累积 AudioSource
@@ -330,53 +329,70 @@ namespace WaveTeam.UI
                 _perf = perfGo.AddComponent<PerformancePlayer>();
             }
             _perf.Setup(_board, _bgm);
-            _perf.OnFinished = msg => _statusText.text = msg;
+            _perf.OnFinished = msg => _statusText.Text = msg;
 
-            var btn = UIFactory.CreateButton("Play", _boardRoot.transform, "演出！", OnPlay);
-            UIStyle.ApplyRound(btn.image, UIStyle.Accent);
-            UIStyle.OutlineText(btn.GetComponentInChildren<Text>());
-            var rt = (RectTransform)btn.transform;
-            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0f);
-            rt.sizeDelta = new Vector2(240, 64);
-            rt.anchoredPosition = new Vector2(0, 20);
+            BuildBottomBar();
+        }
 
-            var stop = UIFactory.CreateButton("Stop", _boardRoot.transform, "停止", OnStop);
-            UIStyle.ApplyRound(stop.image, new Color(0.72f, 0.32f, 0.32f, 1f));
-            UIStyle.OutlineText(stop.GetComponentInChildren<Text>());
-            var srt = (RectTransform)stop.transform;
-            srt.anchorMin = srt.anchorMax = srt.pivot = new Vector2(0.5f, 0f);
-            srt.sizeDelta = new Vector2(120, 64);
-            srt.anchoredPosition = new Vector2(200, 20);
+        private const float HeaderHeight = 74f;   // 顶部提示条高度
+        private const float BottomBarHeight = 72f; // 底部工具栏高度
 
-            var confirm = UIFactory.CreateButton("Confirm", _boardRoot.transform, "确定", OnConfirm);
-            UIStyle.ApplyRound(confirm.image, UIStyle.Ok);
-            UIStyle.OutlineText(confirm.GetComponentInChildren<Text>());
-            var crt = (RectTransform)confirm.transform;
-            crt.anchorMin = crt.anchorMax = crt.pivot = new Vector2(0f, 0f);
-            crt.sizeDelta = new Vector2(120, 44);
-            crt.anchoredPosition = new Vector2(16, 16);
+        /// <summary>
+        /// 底部一条通栏木制工具栏，按钮全部垂直居中对齐：
+        /// 左：确定 / 取消；中：演出！/ 停止；右：退出。
+        /// 原来是五个按钮散在三个角落、高度还不一致，主次分不出来。
+        /// </summary>
+        private void BuildBottomBar()
+        {
+            var bar = UIFactory.CreatePanel("BottomBar", _boardRoot.transform, UIStyle.Stage);
+            bar.raycastTarget = false;
+            UIResource.ApplyFrameOrColor(bar, "UI/header", UIStyle.Stage);
+            var brt = (RectTransform)bar.transform;
+            brt.anchorMin = new Vector2(0f, 0f);
+            brt.anchorMax = new Vector2(1f, 0f);
+            brt.pivot = new Vector2(0.5f, 0f);
+            brt.sizeDelta = new Vector2(-RosterSidebar.PanelWidth, BottomBarHeight);
+            brt.anchoredPosition = Vector2.zero;
 
-            var cancel = UIFactory.CreateButton("Cancel", _boardRoot.transform, "取消", OnCancel);
-            UIStyle.ApplyRound(cancel.image, new Color(0.30f, 0.33f, 0.40f, 1f));
-            UIStyle.OutlineText(cancel.GetComponentInChildren<Text>());
-            var xrt = (RectTransform)cancel.transform;
-            xrt.anchorMin = xrt.anchorMax = xrt.pivot = new Vector2(0f, 0f);
-            xrt.sizeDelta = new Vector2(120, 44);
-            xrt.anchoredPosition = new Vector2(150, 16);
+            // 次要按钮：44 高，垂直居中
+            float y = (BottomBarHeight - 44f) * 0.5f;
+            var confirm = UIFactory.CreatePixelButton("Confirm", _boardRoot.transform, "确定", 1.8f,
+                UIStyle.Ok, UIStyle.Ink, OnConfirm);
+            UIResource.ApplyFrameOrColor(confirm.image, "UI/btn_confirm", UIStyle.Ok);
+            UIFactory.Place((RectTransform)confirm.transform, new Vector2(0f, 0f),
+                new Vector2(120f, 44f), new Vector2(16f, y));
 
-            var exit = UIFactory.CreateButton("Exit", _boardRoot.transform, "退出", OnExitBoard);
-            UIStyle.ApplyRound(exit.image, new Color(0.30f, 0.33f, 0.40f, 1f));
-            UIStyle.OutlineText(exit.GetComponentInChildren<Text>());
-            var ert = (RectTransform)exit.transform;
-            ert.anchorMin = ert.anchorMax = ert.pivot = new Vector2(1f, 0f);
-            ert.sizeDelta = new Vector2(120, 44);
-            ert.anchoredPosition = new Vector2(-16, 16);
+            var cancel = UIFactory.CreatePixelButton("Cancel", _boardRoot.transform, "取消", 1.8f,
+                UIStyle.Grey, UIStyle.Text, OnCancel);
+            UIResource.ApplyFrameOrColor(cancel.image, "UI/btn_cancel", UIStyle.Grey);
+            UIFactory.Place((RectTransform)cancel.transform, new Vector2(0f, 0f),
+                new Vector2(120f, 44f), new Vector2(150f, y));
+
+            var exit = UIFactory.CreatePixelButton("Exit", _boardRoot.transform, "退出", 1.8f,
+                UIStyle.Grey, UIStyle.Text, OnExitBoard);
+            UIResource.ApplyFrameOrColor(exit.image, "UI/btn_cancel", UIStyle.Grey);
+            UIFactory.Place((RectTransform)exit.transform, new Vector2(1f, 0f),
+                new Vector2(120f, 44f), new Vector2(-(RosterSidebar.PanelWidth + 16f), y));
+
+            // 主操作：56 高，垂直居中
+            float y2 = (BottomBarHeight - 56f) * 0.5f;
+            var play = UIFactory.CreatePixelButton("Play", _boardRoot.transform, "演出！", 2.4f,
+                UIStyle.Accent, UIStyle.Ink, OnPlay);
+            UIResource.ApplyFrameOrColor(play.image, "UI/btn_play", UIStyle.Accent);
+            UIFactory.Place((RectTransform)play.transform, new Vector2(0.5f, 0f),
+                new Vector2(240f, 56f), new Vector2(-170f, y2));
+
+            var stop = UIFactory.CreatePixelButton("Stop", _boardRoot.transform, "停止", 2.4f,
+                UIStyle.Danger, UIStyle.Text, OnStop);
+            UIResource.ApplyFrameOrColor(stop.image, "UI/btn_cancel", UIStyle.Danger);
+            UIFactory.Place((RectTransform)stop.transform, new Vector2(0.5f, 0f),
+                new Vector2(120f, 56f), new Vector2(80f, y2));
         }
 
         private void OnPlay()
         {
             if (_perf.IsPlaying) return;
-            _statusText.text = "演出中……";
+            _statusText.Text = "演出中……";
             _perf.Play();
         }
 
@@ -384,7 +400,7 @@ namespace WaveTeam.UI
         {
             if (_perf != null) _perf.Stop();
             if (_bgm != null) _bgm.Stop();
-            _statusText.text = "已停止";
+            _statusText.Text = "已停止";
         }
 
         private void OnConfirm()
@@ -394,13 +410,13 @@ namespace WaveTeam.UI
             string path = Path.Combine(Application.persistentDataPath, "drum_arrangement.json");
             File.WriteAllText(path, json);
             Debug.Log("[波形小队] 已确定，编排已保存：\n" + json);
-            _statusText.text = "已确定 · 已保存 " + data.drums.Count + " 个鼓 → " + path;
+            _statusText.Text = "已确定 · 已保存 " + data.drums.Count + " 个鼓 → " + path;
         }
 
         private void OnCancel()
         {
             _board.Clear();
-            _statusText.text = "已取消（鼓轨已清空）";
+            _statusText.Text = "已取消（鼓轨已清空）";
         }
 
         private void Update()

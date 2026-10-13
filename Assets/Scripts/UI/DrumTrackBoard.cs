@@ -47,6 +47,12 @@ namespace WaveTeam.UI
         private const float PanSpeed = 600f; // 像素/秒
         private const float SlotGap = 6f;    // 格槽间距
 
+        // 程序化木纹：按 1920×1080 参考分辨率铺板缝（和 RosterSidebar 的参考高一致）
+        private const float RefWidth = 1920f;
+        private const float RefHeight = 1080f;
+        private const float PlankHeight = 96f;
+        private const float PlankWidth = 384f;
+
         private BeatSpace _space;
         private readonly List<PlacedDrum> _placed = new List<PlacedDrum>();
         private readonly List<RectTransform> _beatLines = new List<RectTransform>();
@@ -81,6 +87,7 @@ namespace WaveTeam.UI
 
             var bg = GetComponent<Image>();
             UIResource.ApplySpriteOrColor(bg, "UI/baseplate", UIStyle.Stage);
+            DrawPlanks();
 
             _space = new BeatSpace(DefaultPixelsPerBeat, LeftMargin);
 
@@ -111,13 +118,13 @@ namespace WaveTeam.UI
             laneRt.offsetMin = new Vector2(0f, -1f);
             laneRt.offsetMax = new Vector2(0f, 1f);
 
-            // 格槽：16 个圆角卡槽，交替底色，让每个可放置格一目了然
+            // 格槽：16 个凹槽，交替底色，做出「刻进木头里的槽」的观感
             for (int b = 0; b < (int)TrackLengthBeats; b++)
             {
-                var slotColor = b % 2 == 0 ? UIStyle.Cell : new Color(0.17f, 0.22f, 0.34f, 1f);
+                var slotColor = b % 2 == 0 ? UIStyle.Cell : UIStyle.CellAlt;
                 var slot = UIFactory.CreatePanel("Slot_" + b, root, slotColor);
                 slot.raycastTarget = false;
-                UIStyle.ApplyRound(slot, slotColor);
+                UIResource.ApplyWellOrColor(slot, "UI/cell_slot", slotColor);
                 var srt = slot.rectTransform;
                 srt.anchorMin = srt.anchorMax = srt.pivot = new Vector2(0f, 0.5f);
                 srt.anchoredPosition = new Vector2(_space.ToX(b) + SlotGap * 0.5f, 0f);
@@ -125,11 +132,12 @@ namespace WaveTeam.UI
                 _slots.Add(srt);
             }
 
-            // 拍线（每 4 拍加粗为小节线）
+            // 拍线（每 4 拍加粗提亮为小节线）
             for (int b = 0; b <= (int)TrackLengthBeats; b++)
             {
                 bool bar = b % 4 == 0;
-                var line = UIFactory.CreatePanel("Beat_" + b, root, new Color(1f, 1f, 1f, bar ? 0.20f : 0.08f));
+                var line = UIFactory.CreatePanel("Beat_" + b, root,
+                    bar ? new Color(0.95f, 0.83f, 0.62f, 0.34f) : new Color(1f, 0.94f, 0.84f, 0.10f));
                 line.raycastTarget = false;
                 var rt = line.rectTransform;
                 rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 0.5f);
@@ -140,15 +148,59 @@ namespace WaveTeam.UI
             }
         }
 
+        /// <summary>
+        /// 程序化木纹底：横向板缝 + 隔一段一条竖缝。
+        /// 压在底板（UI/baseplate 或 UIStyle.Stage）之上、格槽之下，
+        /// 让面板看起来是张木工台而不是一块纯色布。
+        /// </summary>
+        private void DrawPlanks()
+        {
+            var root = UIFactory.CreateRect("Planks", transform);
+            UIFactory.Stretch(root);
+
+            for (float y = 0f; y <= RefHeight; y += PlankHeight)
+            {
+                var seam = UIFactory.CreatePanel("Seam", root, new Color(0f, 0f, 0f, 0.20f));
+                seam.raycastTarget = false;
+                var srt = (RectTransform)seam.transform;
+                srt.anchorMin = new Vector2(0f, 1f);
+                srt.anchorMax = new Vector2(1f, 1f);
+                srt.pivot = new Vector2(0.5f, 1f);
+                srt.sizeDelta = new Vector2(0f, 2f);
+                srt.anchoredPosition = new Vector2(0f, -y);
+
+                var hi = UIFactory.CreatePanel("SeamHi", root, new Color(1f, 0.92f, 0.80f, 0.045f));
+                hi.raycastTarget = false;
+                var hrt = (RectTransform)hi.transform;
+                hrt.anchorMin = new Vector2(0f, 1f);
+                hrt.anchorMax = new Vector2(1f, 1f);
+                hrt.pivot = new Vector2(0.5f, 1f);
+                hrt.sizeDelta = new Vector2(0f, 1f);
+                hrt.anchoredPosition = new Vector2(0f, -y - 2f);
+            }
+
+            for (float x = 0f; x <= RefWidth; x += PlankWidth)
+            {
+                var joint = UIFactory.CreatePanel("Joint", root, new Color(0f, 0f, 0f, 0.12f));
+                joint.raycastTarget = false;
+                var jrt = (RectTransform)joint.transform;
+                jrt.anchorMin = new Vector2(0f, 0f);
+                jrt.anchorMax = new Vector2(0f, 1f);
+                jrt.pivot = new Vector2(0f, 0.5f);
+                jrt.sizeDelta = new Vector2(1f, 0f);
+                jrt.anchoredPosition = new Vector2(x, 0f);
+            }
+        }
+
         private void AddResetButton()
         {
-            var btn = UIFactory.CreateButton("ResetView", transform, "回起点", ResetView);
-            UIStyle.ApplyRound(btn.image, new Color(0.30f, 0.34f, 0.44f, 1f));
-            UIStyle.OutlineText(btn.GetComponentInChildren<Text>());
+            var btn = UIFactory.CreatePixelButton("ResetView", transform, "回起点", 2f,
+                                                  UIStyle.Grey, UIStyle.Text, ResetView);
+            UIResource.ApplyFrameOrColor(btn.image, "UI/btn_reset", UIStyle.Grey);
             var rt = (RectTransform)btn.transform;
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 1f);
             rt.sizeDelta = new Vector2(140, 44);
-            rt.anchoredPosition = new Vector2(16, -12);
+            rt.anchoredPosition = new Vector2(16, -86);   // 让开顶部的提示条
         }
 
         // ---------- 视口平移 / 缩放 ----------
@@ -232,6 +284,8 @@ namespace WaveTeam.UI
                 p.Rect.sizeDelta = new Vector2(_space.SpanToWidth(p.DurationBeats), p.Rect.sizeDelta.y);
                 p.Waveform.SetPitch(_space.PixelsPerBeat / RhythmPattern.HexPerBeat);
             }
+            // 虚影也跟着平移/缩放走，否则拖拽中滚轮一缩放它就飘了
+            if (_ghost != null && _ghost.gameObject.activeSelf) PlaceGhost();
         }
 
         // ---------- 落位 / 校验 ----------
@@ -272,22 +326,148 @@ namespace WaveTeam.UI
             return startBeat >= 0f && startBeat + duration <= TrackLengthBeats;
         }
 
+        /// <summary>
+        /// 解算一次落点：屏幕坐标 → 吸附后的拍，以及「能不能放」。
+        /// 落点预览和真正落位都走这一份逻辑，从根上杜绝「预览显示绿了却放不下去」。
+        /// </summary>
+        private bool ResolveDrop(DrumCharacter character, Vector2 screenPos,
+                                 out float beat, out bool inLane)
+        {
+            beat = 0f;
+            inLane = false;
+            if (_canvas == null || character == null) return false;
+
+            Vector2 local;
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                    Rect, screenPos, _canvas.worldCamera, out local)) return false;
+
+            inLane = Mathf.Abs(local.y) <= TrackHeight * 0.5f + 20f;   // 需落在轨道竖向范围内
+            beat = Snap(_space.ToBeat(local.x));
+            return inLane
+                && IsValidBeatRange(beat, character.Pattern.TotalBeats)
+                && CanPlace(character, beat);
+        }
+
         /// <summary>卡片拖放落点 → 放置；成功返回 true（卡片回侧栏可复用）。</summary>
         public bool TryPlaceFromCard(DrumCharacterCard card, Vector2 screenPos)
         {
-            if (_canvas == null) return false;
-            Vector2 local;
-            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(Rect, screenPos, _canvas.worldCamera, out local)) return false;
-            if (Mathf.Abs(local.y) > TrackHeight * 0.5f + 20f) return false; // 需落在轨道竖向范围内
-            float beat = Snap(_space.ToBeat(local.x));
-            if (!IsValidBeatRange(beat, card.Character.Pattern.TotalBeats)) return false;
+            if (card == null) return false;
+            float beat;
+            bool inLane;
+            if (!ResolveDrop(card.Character, screenPos, out beat, out inLane)) return false;
             return Place(card.Character, beat) != null;
+        }
+
+        // ---------- 拖拽落点预览 ----------
+        //
+        // 虚影是一个**没有调 SetCategory 的** HexWaveformRenderer：mainTexture 会退回白图，
+        // 于是 Graphic.color 能直接拿来上绿/红，不会和音色贴图相乘变脏。
+
+        private static readonly Color GhostOk = new Color(0.43f, 0.75f, 0.45f, 0.42f);
+        private static readonly Color GhostBad = new Color(0.76f, 0.35f, 0.29f, 0.42f);
+
+        private HexWaveformRenderer _ghost;
+        private PixelText _ghostLabel;
+        private float _ghostBeat;
+        private float _ghostBeats = 1f;
+
+        /// <summary>拖拽中每帧刷新落点虚影：绿=能放，红=不能放（重叠 / 越界 / 超出 16 拍）。</summary>
+        public void ShowDropPreview(DrumCharacterCard card, Vector2 screenPos)
+        {
+            if (card == null || card.Character == null) { HideDropPreview(); return; }
+
+            var c = card.Character;
+
+            // 拖到侧栏上方：不显示虚影（这块位置本来也不允许落位）
+            if (IsDropBlocked != null && IsDropBlocked(screenPos)) { SetGhostVisible(false); return; }
+
+            float beat;
+            bool inLane;
+            bool ok = ResolveDrop(c, screenPos, out beat, out inLane);
+
+            // 拖回侧栏（不在轨道竖向范围内）时干脆不显示，免得跟一个红块乱跑
+            if (!inLane) { SetGhostVisible(false); return; }
+
+            EnsureGhost(c);
+            SetGhostVisible(true);
+
+            _ghostBeat = beat;
+            _ghostBeats = c.Pattern.TotalBeats;
+            _ghost.color = ok ? GhostOk : GhostBad;
+            PlaceGhost();
+            if (_ghostLabel != null) _ghostLabel.Text = "拍 " + Mathf.RoundToInt(beat);
+        }
+
+        /// <summary>松手 / 落位失败后收起虚影。</summary>
+        public void HideDropPreview()
+        {
+            SetGhostVisible(false);
+        }
+
+        private void SetGhostVisible(bool on)
+        {
+            if (_ghost != null && _ghost.gameObject.activeSelf != on)
+                _ghost.gameObject.SetActive(on);
+        }
+
+        private void EnsureGhost(DrumCharacter c)
+        {
+            if (_ghost != null)
+            {
+                _ghost.SetPattern(c.EffectivePattern, RhythmPattern.StableHash(c.Name));
+                return;
+            }
+
+            var go = new GameObject("DropGhost", typeof(RectTransform), typeof(CanvasRenderer), typeof(HexWaveformRenderer));
+            go.transform.SetParent(_drumRoot, false);
+
+            _ghost = go.GetComponent<HexWaveformRenderer>();
+            _ghost.SetPattern(c.EffectivePattern, RhythmPattern.StableHash(c.Name));
+            _ghost.SetBaselineAnchored(true);
+            _ghost.raycastTarget = false;
+
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 0.5f);
+            rt.SetAsLastSibling();      // 永远压在已放鼓上面，看得清
+
+            _ghostLabel = UIFactory.PlacePixelText("Beat", go.transform, "拍 0", 1.5f,
+                                                   UIStyle.Text, PixelText.Align.Center,
+                                                   new Vector2(0f, 1f), new Vector2(8f, 6f));
+            _ghostLabel.raycastTarget = false;
+        }
+
+        private void PlaceGhost()
+        {
+            if (_ghost == null) return;
+            var rt = (RectTransform)_ghost.transform;
+            rt.anchoredPosition = new Vector2(_space.ToX(_ghostBeat), 0f);
+            rt.sizeDelta = new Vector2(_space.SpanToWidth(_ghostBeats), TrackHeight);
+            _ghost.SetPitch(_space.PixelsPerBeat / RhythmPattern.HexPerBeat);
         }
 
         /// <summary>把角色卡拖放接到本板（供启动/接线层调用）。</summary>
         public void AttachCard(DrumCharacterCard card)
         {
             card.OnDragEnd = (c, pos) => TryPlaceFromCard(c, pos);
+        }
+
+        /// <summary>落点是否被别的 UI（比如右侧角色栏）盖住。由接线层设置，板子本身不依赖侧栏。</summary>
+        public System.Func<Vector2, bool> IsDropBlocked;
+
+        /// <summary>
+        /// 接线：拖动中实时刷新落点虚影，松手落位并收起虚影。
+        /// 被侧栏挡住的位置不显示虚影、也不落位（卡片是拖回侧栏的，不该掉到板上）。
+        /// </summary>
+        public void WireCard(DrumCharacterCard card)
+        {
+            if (card == null) return;
+            card.OnDragMove = (c, pos) => ShowDropPreview(c, pos);
+            card.OnDragEnd = (c, pos) =>
+            {
+                HideDropPreview();
+                if (IsDropBlocked != null && IsDropBlocked(pos)) return false;
+                return TryPlaceFromCard(c, pos);
+            };
         }
 
         /// <summary>打开某已放鼓的细节预览（加点/洗点）。</summary>
@@ -412,13 +592,11 @@ namespace WaveTeam.UI
             rt.anchoredPosition = new Vector2(-12f, 0f); // 落在 cur 右缘内侧，避免被后一个鼓的 blob 盖住
 
             var img = go.GetComponent<Image>();
-            img.sprite = UIStyle.Round;
-            img.type = Image.Type.Sliced;
-            img.color = new Color(1f, 0.82f, 0.35f, 0.95f); // 金黄：待连接
+            UIStyle.ApplyFrame(img, new Color(1f, 0.82f, 0.35f, 0.95f)); // 金黄：待连接
 
             // 中间放个「+」字形，表明这是可点的连接点；状态（待连接/已连接）由颜色表达
-            var glyph = UIFactory.CreateText("Glyph", go.transform, "+", 14, new Color(0.12f, 0.10f, 0.03f, 1f), TextAnchor.MiddleCenter);
-            UIFactory.Stretch((RectTransform)glyph.transform);
+            var glyph = PixelText.Create("Glyph", go.transform, "+", 1.2f,
+                                         UIStyle.Ink, PixelText.Align.Center);
             glyph.raycastTarget = false; // 让点击落在按钮上，不被文字挡住
 
             var btn = go.GetComponent<Button>();
