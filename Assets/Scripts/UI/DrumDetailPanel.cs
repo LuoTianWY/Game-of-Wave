@@ -13,7 +13,7 @@ namespace WaveTeam.UI
     {
         private DrumCharacter _character;
         private HexWaveformRenderer _waveform;
-        private Text _pointsText;
+        private PixelText _pointsText;
 
         public static DrumDetailPanel Show(DrumCharacter character, Transform canvasRoot)
         {
@@ -39,20 +39,18 @@ namespace WaveTeam.UI
 
             // 中央面板
             var panel = UIFactory.CreatePanel("Panel", transform, UIStyle.Card);
-            UIStyle.ApplyRound(panel, UIStyle.Card);
+            UIResource.ApplyFrameOrColor(panel, "UI/card_bg", UIStyle.Card);
             var prt = (RectTransform)panel.transform;
             prt.anchorMin = prt.anchorMax = prt.pivot = new Vector2(0.5f, 0.5f);
             prt.sizeDelta = new Vector2(760f, 480f);
             prt.anchoredPosition = Vector2.zero;
 
             // 标题：名字 · 性格名词
-            var title = UIFactory.CreateText("Title", panel.transform,
-                _character.Name + " · " + _character.Noun, 30, UIStyle.Text, TextAnchor.MiddleCenter);
-            UIStyle.OutlineText(title);
-            var trt = (RectTransform)title.transform;
-            trt.anchorMin = trt.anchorMax = trt.pivot = new Vector2(0.5f, 1f);
-            trt.sizeDelta = new Vector2(680f, 40f);
-            trt.anchoredPosition = new Vector2(0f, -16f);
+            var title = UIFactory.PlacePixelText("Title", panel.transform,
+                _character.Name + " · " + _character.Noun, 2.4f,
+                UIStyle.Text, PixelText.Align.Center,
+                new Vector2(0.5f, 1f), new Vector2(0f, -18f));
+            title.raycastTarget = false;
 
             // 波形预览：完整骨架，未解锁部分画成暗灰；可左右/上下拖动查看（范围 = 波形最远格）
             var scrollGo = new GameObject("WaveScroll", typeof(RectTransform), typeof(Image), typeof(ScrollRect));
@@ -111,34 +109,32 @@ namespace WaveTeam.UI
             scroll.content = contentRt;
 
             // 解锁进度文字
-            _pointsText = UIFactory.CreateText("Points", panel.transform, "", 22, UIStyle.Text, TextAnchor.MiddleCenter);
-            UIStyle.OutlineText(_pointsText);
-            var pt = (RectTransform)_pointsText.transform;
-            pt.anchorMin = pt.anchorMax = pt.pivot = new Vector2(0.5f, 0f);
-            pt.sizeDelta = new Vector2(680f, 30f);
-            pt.anchoredPosition = new Vector2(0f, 54f);
+            _pointsText = UIFactory.PlacePixelText("Points", panel.transform, "", 1.8f,
+                UIStyle.Text, PixelText.Align.Center,
+                new Vector2(0.5f, 0f), new Vector2(0f, 56f));
+            _pointsText.raycastTarget = false;
             RefreshText();
 
             // 加点 / 洗点 / 关闭
-            var add = UIFactory.CreateButton("Add", panel.transform, "加点", OnAdd);
-            UIStyle.ApplyRound(add.image, UIStyle.Accent);
-            UIStyle.OutlineText(add.GetComponentInChildren<Text>());
+            var add = UIFactory.CreatePixelButton("Add", panel.transform, "加点", 1.8f,
+                UIStyle.Accent, UIStyle.Ink, OnAdd);
+            UIResource.ApplyFrameOrColor(add.image, "UI/btn_play", UIStyle.Accent);
             var art = (RectTransform)add.transform;
             art.anchorMin = art.anchorMax = art.pivot = new Vector2(0f, 0f);
             art.sizeDelta = new Vector2(180f, 52f);
             art.anchoredPosition = new Vector2(24f, 16f);
 
-            var reset = UIFactory.CreateButton("Reset", panel.transform, "洗点", OnReset);
-            UIStyle.ApplyRound(reset.image, new Color(0.55f, 0.36f, 0.20f, 1f));
-            UIStyle.OutlineText(reset.GetComponentInChildren<Text>());
+            var reset = UIFactory.CreatePixelButton("Reset", panel.transform, "洗点", 1.8f,
+                new Color(0.55f, 0.36f, 0.20f, 1f), UIStyle.Text, OnReset);
+            UIResource.ApplyFrameOrColor(reset.image, "UI/btn_cancel", new Color(0.55f, 0.36f, 0.20f, 1f));
             var rrt = (RectTransform)reset.transform;
             rrt.anchorMin = rrt.anchorMax = rrt.pivot = new Vector2(0f, 0f);
             rrt.sizeDelta = new Vector2(180f, 52f);
             rrt.anchoredPosition = new Vector2(224f, 16f);
 
-            var close = UIFactory.CreateButton("Close", panel.transform, "关闭", Close);
-            UIStyle.ApplyRound(close.image, new Color(0.30f, 0.33f, 0.40f, 1f));
-            UIStyle.OutlineText(close.GetComponentInChildren<Text>());
+            var close = UIFactory.CreatePixelButton("Close", panel.transform, "关闭", 1.8f,
+                UIStyle.Grey, UIStyle.Text, Close);
+            UIResource.ApplyFrameOrColor(close.image, "UI/btn_cancel", UIStyle.Grey);
             var crt = (RectTransform)close.transform;
             crt.anchorMin = crt.anchorMax = crt.pivot = new Vector2(1f, 0f);
             crt.sizeDelta = new Vector2(140f, 52f);
@@ -170,7 +166,7 @@ namespace WaveTeam.UI
 
         private void RefreshText()
         {
-            _pointsText.text = "已解锁 " + _character.UnlockedPoints + " / " + _character.Pattern.Points.Length + " 个节奏点";
+            _pointsText.Text = "已解锁 " + _character.UnlockedPoints + " / " + _character.Pattern.Points.Length + " 个节奏点";
         }
 
         private void Close()

@@ -20,6 +20,9 @@ namespace WaveTeam.UI
         /// <summary>拖拽结束回调，返回 true 表示已被安置（不会回原位）。</summary>
         public System.Func<DrumCharacterCard, Vector2, bool> OnDragEnd;
 
+        /// <summary>拖拽过程中每帧回调，用来在鼓轨板上刷新落点虚影。</summary>
+        public System.Action<DrumCharacterCard, Vector2> OnDragMove;
+
         private HexWaveformRenderer _waveform;
         private AudioSource _source;
 
@@ -45,7 +48,7 @@ namespace WaveTeam.UI
             Rect.sizeDelta = new Vector2(Width, Height);
 
             var bg = GetComponent<Image>();
-            UIStyle.ApplyRound(bg, UIStyle.Card);
+            UIResource.ApplyFrameOrColor(bg, "UI/card_bg", UIStyle.Card);
 
             // 波形预览（上半部）：六边形路径，节奏点高亮
             var waveGo = new GameObject("Waveform", typeof(RectTransform), typeof(CanvasRenderer), typeof(HexWaveformRenderer));
@@ -63,16 +66,12 @@ namespace WaveTeam.UI
             waveRt.offsetMin = new Vector2(8f, 6f);
             waveRt.offsetMax = new Vector2(-8f, -6f);
 
-            // 名字 + 性格名词（左下）
-            var label = UIFactory.CreateText("Label", transform,
-                Character.Name + " · " + Character.Noun, 20,
-                UIStyle.Text, TextAnchor.MiddleLeft);
-            UIStyle.OutlineText(label);
+            // 名字 + 性格名词（左下），像素字
+            var label = UIFactory.PlacePixelText("Label", transform,
+                Character.Name + " · " + Character.Noun, 2f,
+                UIStyle.Text, PixelText.Align.Left,
+                new Vector2(0f, 0f), new Vector2(10f, 8f));
             label.raycastTarget = false;
-            var labelRt = (RectTransform)label.transform;
-            labelRt.anchorMin = labelRt.anchorMax = labelRt.pivot = new Vector2(0f, 0f);
-            labelRt.sizeDelta = new Vector2(180f, 40f);
-            labelRt.anchoredPosition = new Vector2(10f, 4f);
 
             AddPlayButton();
 
@@ -83,22 +82,13 @@ namespace WaveTeam.UI
 
         private void AddPlayButton()
         {
-            var go = new GameObject("Play", typeof(RectTransform), typeof(Image), typeof(Button));
-            go.transform.SetParent(transform, false);
-            var img = go.GetComponent<Image>();
-            UIStyle.ApplyRound(img, UIStyle.Accent);
-            var btn = go.GetComponent<Button>();
-            btn.targetGraphic = img;
-            btn.onClick.AddListener(PlayPreview);
-            var rt = (RectTransform)go.transform;
+            var btn = UIFactory.CreatePixelButton("Play", transform, "试听", 1.5f,
+                                                  UIStyle.Accent, UIStyle.Ink, PlayPreview);
+            UIResource.ApplyFrameOrColor(btn.image, "UI/btn_play", UIStyle.Accent);
+            var rt = (RectTransform)btn.transform;
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(1f, 0f);
             rt.sizeDelta = new Vector2(76f, 34f);
             rt.anchoredPosition = new Vector2(-10f, 4f);
-
-            var label = UIFactory.CreateText("Label", go.transform, "试听", 20, Color.white, TextAnchor.MiddleCenter);
-            UIStyle.OutlineText(label);
-            label.raycastTarget = false;
-            UIFactory.Stretch((RectTransform)label.transform);
         }
 
         private void PlayPreview()
@@ -133,11 +123,13 @@ namespace WaveTeam.UI
             }
             Rect.pivot = new Vector2(0.5f, 0.5f);
             FollowPointer(e);
+            if (OnDragMove != null) OnDragMove(this, e.position);
         }
 
         public void OnDrag(PointerEventData e)
         {
             FollowPointer(e);
+            if (OnDragMove != null) OnDragMove(this, e.position);
         }
 
         public void OnEndDrag(PointerEventData e)

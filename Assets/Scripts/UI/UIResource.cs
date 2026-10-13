@@ -39,5 +39,38 @@ namespace WaveTeam.UI
                 img.color = fallback;
             }
         }
+
+        /// <summary>
+        /// 面板 / 按钮用：有 PNG 就按 9-slice 贴上去，没有就退回**程序化像素边框**。
+        /// 这样美术到位前界面已经是像素风，PNG 丢进对应路径即生效、代码不用改。
+        /// </summary>
+        public static void ApplyFrameOrColor(Image img, string path, Color fallback)
+        {
+            if (img == null) return;
+            var s = Load(path);
+            if (s != null)
+            {
+                img.sprite = s;
+                img.type = Image.Type.Sliced;
+                img.color = Color.white;
+                return;
+            }
+            UIStyle.ApplyFrame(img, fallback);
+        }
+
+        /// <summary>同上，兜底用凹槽边框（格槽那类「刻进去」的元素）。</summary>
+        public static void ApplyWellOrColor(Image img, string path, Color fallback)
+        {
+            if (img == null) return;
+            var s = Load(path);
+            if (s != null)
+            {
+                img.sprite = s;
+                img.type = Image.Type.Sliced;
+                img.color = Color.white;
+                return;
+            }
+            UIStyle.ApplyWell(img, fallback);
+        }
     }
 }

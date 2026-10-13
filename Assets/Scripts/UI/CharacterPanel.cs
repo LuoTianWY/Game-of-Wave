@@ -72,7 +72,9 @@ namespace WaveTeam.UI
             closeBtn.transition = Selectable.Transition.None;
             closeBtn.onClick.AddListener(Close);
 
-            var box = UIFactory.CreatePanel("Box", transform, new Color(0.09f, 0.11f, 0.18f, 0.99f));
+            var box = UIFactory.CreatePanel("Box", transform,
+                new Color(UIStyle.Cell.r, UIStyle.Cell.g, UIStyle.Cell.b, 0.99f));
+            UIStyle.ApplyFrame(box, new Color(UIStyle.Cell.r, UIStyle.Cell.g, UIStyle.Cell.b, 0.99f));
             box.raycastTarget = true;      // 挡住暗底，点面板内部不会误关
             UIFactory.Place((RectTransform)box.transform, new Vector2(0.5f, 0.5f),
                             new Vector2(PanelW, PanelH), Vector2.zero);
@@ -103,7 +105,8 @@ namespace WaveTeam.UI
         /// </summary>
         private void BuildPortrait(Transform box, NpcProfile p)
         {
-            var frame = UIFactory.CreatePanel("Portrait", box, new Color(0.13f, 0.17f, 0.27f, 1f));
+            var frame = UIFactory.CreatePanel("Portrait", box, UIStyle.Panel);
+            UIStyle.ApplyFrame(frame, UIStyle.Panel);
             frame.raycastTarget = false;
             var frameRt = (RectTransform)frame.transform;
             UIFactory.Place(frameRt, new Vector2(0f, 1f), new Vector2(340f, 400f), new Vector2(40f, -140f));
@@ -127,7 +130,7 @@ namespace WaveTeam.UI
             AddBlock(frameRt, "Head", new Vector2(86f, 86f), new Vector2(0f, 250f), Lighten(c, 0.25f));
 
             var hint = PixelText.Create("Hint", frameRt, "放大人物素材（占位）", 1.4f,
-                                        new Color(0.55f, 0.60f, 0.72f), PixelText.Align.Center);
+                                        UIStyle.TextDim, PixelText.Align.Center);
             UIFactory.Place((RectTransform)hint.transform, new Vector2(0.5f, 0f),
                             hint.PreferredSize, new Vector2(0f, 10f));
         }
@@ -167,13 +170,13 @@ namespace WaveTeam.UI
             AddRow(col, ref y, "等级", "Lv." + p.Level, Color.white);
             AddRow(col, ref y, "目前波形", p.WaveformText, Color.white);
             AddRow(col, ref y, "正在进行的任务", Wrap(p.Task, ValueWrapChars),
-                   new Color(0.80f, 0.85f, 0.95f));
+                   UIStyle.Text);
         }
 
         private static void AddRow(RectTransform col, ref float y, string label, string value, Color valueColor)
         {
             var lab = PixelText.Create("L_" + label, col, label, TextScale,
-                                       new Color(0.52f, 0.58f, 0.72f));
+                                       UIStyle.TextDim);
             UIFactory.Place((RectTransform)lab.transform, new Vector2(0f, 1f),
                             lab.PreferredSize, new Vector2(LabelX, y));
 
@@ -204,7 +207,7 @@ namespace WaveTeam.UI
                            new Vector2(160f, 56f),
                            new Vector2(0f, 0f),
                            new Vector2(x, 40f),
-                           new Color(0.22f, 0.27f, 0.40f),
+                           UIStyle.Grey,
                            action);
 
                 x += 180f;
@@ -214,7 +217,7 @@ namespace WaveTeam.UI
                        new Vector2(170f, 56f),
                        new Vector2(1f, 0f),
                        new Vector2(-44f, 40f),
-                       new Color(0.72f, 0.32f, 0.32f),
+                       UIStyle.Danger,
                        Close);
 
             var hint = PixelText.Create(
@@ -222,7 +225,7 @@ namespace WaveTeam.UI
                 box,
                 "Esc 关闭",
                 1.4f,
-                new Color(0.50f, 0.55f, 0.68f));
+                UIStyle.TextDim);
 
             UIFactory.Place(
                 (RectTransform)hint.transform,
@@ -242,7 +245,7 @@ namespace WaveTeam.UI
             var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
             go.transform.SetParent(parent, false);
             var img = go.GetComponent<Image>();
-            img.color = color;
+            UIStyle.ApplyFrame(img, color);
             img.raycastTarget = true;
 
             var btn = go.GetComponent<Button>();
@@ -278,7 +281,8 @@ namespace WaveTeam.UI
             var dialogueBox = UIFactory.CreatePanel(
                 "DialogueBox",
                 transform,
-                new Color(0.07f, 0.09f, 0.15f, 0.98f));
+                new Color(UIStyle.BgDeep.r, UIStyle.BgDeep.g, UIStyle.BgDeep.b, 0.98f));
+            UIStyle.ApplyFrame(dialogueBox, new Color(UIStyle.BgDeep.r, UIStyle.BgDeep.g, UIStyle.BgDeep.b, 0.98f));
 
             dialogueBox.raycastTarget = true;
 
@@ -294,7 +298,7 @@ namespace WaveTeam.UI
                 dialogueBox.transform,
                 Profile.Name,
                 2.5f,
-                new Color(1f, 0.88f, 0.42f));
+                UIStyle.Accent);
 
             UIFactory.Place(
                 (RectTransform)name.transform,
@@ -324,7 +328,7 @@ namespace WaveTeam.UI
                 new Vector2(160f, 56f),
                 new Vector2(1f, 0f),
                 new Vector2(-40f, 30f),
-                new Color(0.22f, 0.27f, 0.40f),
+                UIStyle.Grey,
                 () => Destroy(dialogueBox.gameObject));
         }
         private void OnPlaceholderAction(string label)

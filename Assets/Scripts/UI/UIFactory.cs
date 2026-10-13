@@ -59,7 +59,7 @@ namespace WaveTeam.UI
             var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
             go.transform.SetParent(parent, false);
             var img = go.GetComponent<Image>();
-            img.color = new Color(0.25f, 0.25f, 0.28f, 0.95f);
+            img.color = UIStyle.Grey;
             var btn = go.GetComponent<Button>();
             btn.targetGraphic = img;
             btn.onClick.AddListener(() => onClick());
@@ -73,6 +73,64 @@ namespace WaveTeam.UI
             text.alignment = TextAnchor.MiddleCenter;
             text.font = BuiltinFont();
             Stretch((RectTransform)labelGo.transform);
+            return btn;
+        }
+
+        // ---------- 像素字 / 像素按钮 ----------
+        //
+        // 音轨板这一套界面已经全面改用项目自制的 PixelText（位图像素字），
+        // 不再用内置 Arial —— 否则同一个游戏里会出现两套字形。
+
+        /// <summary>居中、按内容自适应的像素文字（按钮标签用这个）。</summary>
+        public static PixelText CreatePixelText(string name, Transform parent, string text,
+                                                float pixelScale, Color color,
+                                                PixelText.Align align = PixelText.Align.Left)
+        {
+            return PixelText.Create(name, parent, text, pixelScale, color, align);
+        }
+
+        /// <summary>按锚点摆放的像素文字，尺寸取 PreferredSize（面板里的标题/说明用这个）。</summary>
+        public static PixelText PlacePixelText(string name, Transform parent, string text,
+                                               float pixelScale, Color color, PixelText.Align align,
+                                               Vector2 anchor, Vector2 anchoredPos)
+        {
+            var t = PixelText.Create(name, parent, text, pixelScale, color, align);
+            Place((RectTransform)t.transform, anchor, t.PreferredSize, anchoredPos);
+            return t;
+        }
+
+        /// <summary>
+        /// 像素风按钮：凸面像素边框 + 居中像素字 + 调好的状态色。
+        /// hover 略微提亮、按下压暗、禁用变灰，都用 ColorBlock 的 tint 实现，
+        /// 不会污染 Image.color（底色要留着当按钮颜色）。
+        /// </summary>
+        public static Button CreatePixelButton(string name, Transform parent, string label,
+                                               float pixelScale, Color fill, Color textColor,
+                                               System.Action onClick)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
+            go.transform.SetParent(parent, false);
+
+            var img = go.GetComponent<Image>();
+            UIStyle.ApplyFrame(img, fill);
+
+            var btn = go.GetComponent<Button>();
+            btn.targetGraphic = img;
+            btn.transition = Selectable.Transition.ColorTint;
+            var cb = btn.colors;
+            cb.normalColor = Color.white;
+            cb.highlightedColor = new Color(1.08f, 1.08f, 1.08f, 1f);
+            cb.pressedColor = new Color(0.86f, 0.86f, 0.86f, 1f);
+            cb.selectedColor = Color.white;
+            cb.disabledColor = new Color(0.55f, 0.55f, 0.55f, 1f);
+            cb.colorMultiplier = 1f;
+            cb.fadeDuration = 0.06f;
+            btn.colors = cb;
+            if (onClick != null) btn.onClick.AddListener(() => onClick());
+
+            var text = PixelText.Create("Label", go.transform, label, pixelScale, textColor,
+                                        PixelText.Align.Center);
+            text.raycastTarget = false;
             return btn;
         }
 
