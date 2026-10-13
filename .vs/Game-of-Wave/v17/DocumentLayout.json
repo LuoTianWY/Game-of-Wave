@@ -7,7 +7,7 @@
       "RelativeMoniker": "D:0:0:{EFBAE957-4B2C-9D93-1E6F-67E92EDF268A}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\room\\rehearsalroomspawner.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{EFBAE957-4B2C-9D93-1E6F-67E92EDF268A}|Assembly-CSharp.csproj|c:\\users\\yuan zhong\\documents\\github\\game-of-wave\\assets\\scripts\\ui\\gamebootstrap.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{EFBAE957-4B2C-9D93-1E6F-67E92EDF268A}|Assembly-CSharp.csproj|C:\\Users\\Yuan Zhong\\Documents\\GitHub\\Game-of-Wave\\assets\\scripts\\ui\\gamebootstrap.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{EFBAE957-4B2C-9D93-1E6F-67E92EDF268A}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\ui\\gamebootstrap.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
@@ -52,7 +52,7 @@
               "RelativeDocumentMoniker": "Assets\\Scripts\\Room\\RehearsalRoomSpawner.cs",
               "ToolTip": "C:\\Users\\Yuan Zhong\\Documents\\GitHub\\Game-of-Wave\\Assets\\Scripts\\Room\\RehearsalRoomSpawner.cs",
               "RelativeToolTip": "Assets\\Scripts\\Room\\RehearsalRoomSpawner.cs",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAAAFEAAAAAAAAA",
+              "ViewState": "AQIAACIAAAAAAAAAAAAgwHEAAAABAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-10-05T19:29:19.154Z",
               "EditorCaption": ""
@@ -103,8 +103,7 @@
               "RelativeToolTip": "Assets\\Scripts\\UI\\GameBootstrap.cs",
               "ViewState": "AQIAAMUAAAAAAAAAAAASwOAAAAAJAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-10-03T10:55:21.479Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-10-03T10:55:21.479Z"
             },
             {
               "$type": "Document",
