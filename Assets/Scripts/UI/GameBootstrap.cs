@@ -32,6 +32,7 @@ namespace WaveTeam.UI
 
         private GameObject _objectiveRoot;
         private PixelText _objectiveText;
+        private Button _enterBoardButton;
 
         private readonly HashSet<string> _talkedNpcs = new HashSet<string>();
 
@@ -91,14 +92,15 @@ namespace WaveTeam.UI
             title.raycastTarget = false;
 
             // 缩到右下角：房间本身才是这一屏的主体，按钮不该压在地板中间
-            var btn = UIFactory.CreatePixelButton("EnterBoard", _roomRoot.transform, "进入音轨板", 1.8f,
+            _enterBoardButton = UIFactory.CreatePixelButton("EnterBoard", _roomRoot.transform, "进入音轨板", 1.8f,
                 UIStyle.Accent, UIStyle.Ink, OnEnterBoard);
-            UIResource.ApplyFrameOrColor(btn.image, "UI/btn_play", UIStyle.Accent);
-            var bRt = (RectTransform)btn.transform;
+            UIResource.ApplyFrameOrColor(_enterBoardButton.image, "UI/btn_play", UIStyle.Accent);
+            var bRt = (RectTransform)_enterBoardButton.transform;
             bRt.anchorMin = bRt.anchorMax = bRt.pivot = new Vector2(1f, 0f);
             bRt.sizeDelta = new Vector2(200, 56);
             bRt.anchoredPosition = new Vector2(-24, 24);
-
+           
+            RefreshEnterBoardState();
             EnsureRoomCharacters();
             BuildObjectiveUI();
         }
@@ -158,7 +160,21 @@ namespace WaveTeam.UI
                 _objectiveText.PreferredSize,
                 new Vector2(20f, -75f));
         }
+        private bool AreRequiredNpcsTalked()
+        {
+            return _talkedNpcs.Contains("阿宁")
+                && _talkedNpcs.Contains("小川")
+                && _talkedNpcs.Contains("石头");
+        }
 
+        private void RefreshEnterBoardState()
+        {
+            if (_enterBoardButton == null) return;
+
+            bool ready = AreRequiredNpcsTalked();
+
+            _enterBoardButton.interactable = ready;
+        }
 
 
         // ---------- 排练室里的角色 ----------
@@ -199,6 +215,7 @@ namespace WaveTeam.UI
             _talkedNpcs.Add(profile.Name);
 
             RefreshObjectiveUI();
+            RefreshEnterBoardState();
         }
 
         private void RefreshObjectiveUI()
