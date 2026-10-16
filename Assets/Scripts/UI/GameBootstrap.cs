@@ -346,7 +346,21 @@ namespace WaveTeam.UI
                 _perf = perfGo.AddComponent<PerformancePlayer>();
             }
             _perf.Setup(_board, _bgm);
-            _perf.OnFinished = msg => _statusText.Text = msg;
+            _perf.OnFinished = msg =>
+            {
+                // 空音轨时保留原来的提示
+                if (_board == null || _board.Placed.Count == 0)
+                {
+                    _statusText.Text = msg;
+                    return;
+                }
+
+                // 演出结束后，只显示统一的排练评分
+                var result = RehearsalEvaluator.Evaluate(_board);
+
+                _statusText.Text =
+                    "排练评分：" + result.Score;
+            };
 
             BuildBottomBar();
         }
@@ -426,6 +440,8 @@ namespace WaveTeam.UI
             string json = JsonUtility.ToJson(data, true);
             string path = Path.Combine(Application.persistentDataPath, "drum_arrangement.json");
             File.WriteAllText(path, json);
+
+
             Debug.Log("[波形小队] 已确定，编排已保存：\n" + json);
             _statusText.Text = "已确定 · 已保存 " + data.drums.Count + " 个鼓 → " + path;
         }
