@@ -1,18 +1,20 @@
 # -*- coding: utf-8 -*-
 """
-生成主角的行走贴图：3 个朝向（下 / 上 / 侧）× 4 帧，每帧 32×48。
+生成主角（女生）的行走贴图：3 个朝向（下 / 上 / 侧）× 4 帧，每帧 32×52。
 
 为什么用脚本画而不是让 AI 直接出序列帧：AI 出的多帧人物，四肢位置和配色每帧
 都会飘，切成动画会抖。这里用同一套「身体部件」按不同姿态参数画，帧与帧之间
 只有腿和手臂在动，天然对齐。
 
-要点（第一版踩过的坑）：
-  · 腿之间必须留一列透明，描边会把这一列填深色，两条腿才分得开；
-  · 裤子不能太黑，否则和描边同色，仍然糊成一块 → 用暖灰褐；
-  · 手臂要画在躯干外侧、用深一档的衣服色，否则轮廓合在一起看不出手。
+要点（踩过的坑）：
+  · 腿之间必须留出透明列，描边会把这一列填深色，两条腿才分得开；
+  · 手臂要画在躯干外侧、中间留一列透明，否则轮廓连成一片，等于没有手；
+  · 三个朝向共用同一套头身轮廓，只靠「头转过去 + 腿前后错位」表达朝向，
+    这样三个角度看起来是同一个人，而不是三种体型。
 
+尺寸：32×52 @ PPU 32 → 1.0×1.625 世界单位（比 NPC 的 1.54 略高一点）。
 输出：Assets/Resources/Characters/Player/player_<dir>_<0..3>.png
-导入：Point 采样、PPU 32（→ 1.0×1.5 世界单位）、不压缩。
+导入：Point 采样、PPU 32、轴心 BottomCenter、不压缩。
 
 用法：python Tools/make_player_sprite.py
 """
@@ -23,30 +25,31 @@ from PIL import Image
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT_DIR = os.path.join(ROOT, 'Assets', 'Resources', 'Characters', 'Player')
 
-W, H = 32, 48
+W, H = 32, 52
 
 CLEAR = (0, 0, 0, 0)
 OUTLINE = (43, 28, 21, 255)      # #2B1C15
-SKIN = (232, 185, 142, 255)      # #E8B98E
-SKIN_D = (198, 145, 104, 255)    # #C69168
+SKIN = (237, 193, 155, 255)      # #EDC19B
+SKIN_D = (201, 150, 113, 255)    # #C99671
 HAIR = (74, 47, 34, 255)         # #4A2F22
-HAIR_L = (112, 74, 52, 255)      # #704A34
-SHIRT = (217, 162, 74, 255)      # #D9A24A 暖金，主角的招牌色
-SHIRT_D = (170, 122, 48, 255)    # #AA7A30
-PANTS = (122, 98, 76, 255)       # #7A624C 暖灰褐，能和描边分开
-PANTS_D = (96, 76, 58, 255)      # #604C3A
+HAIR_L = (118, 78, 55, 255)      # #764E37
+SHIRT = (240, 230, 216, 255)     # #F0E6D8 奶白衬衫
+SHIRT_D = (211, 195, 174, 255)   # #D3C3AE
+SKIRT = (176, 82, 60, 255)       # #B0523C 砖红半身裙
+SKIRT_D = (142, 64, 48, 255)     # #8E4030
 SHOE = (58, 44, 34, 255)         # #3A2C22
 EYE = (32, 21, 16, 255)
-BELT = (86, 64, 46, 255)
+BLUSH = (222, 156, 134, 255)     # #DE9C86
 
-# 竖向分区（不含描边，描边是最后向外扩 1px）
-HAIR_TOP = 6
+HAIR_TOP = 5
 CHIN = 17
 NECK = 18
 TORSO_TOP = 19
-TORSO_BOT = 28
-LEG_TOP = 30
-FOOT_BOT = 45
+TORSO_BOT = 29
+SKIRT_TOP = 30
+SKIRT_BOT = 36
+LEG_TOP = 37
+FOOT_BOT = 50
 
 
 class Canvas(object):
@@ -71,7 +74,7 @@ class Canvas(object):
                     self.put(x, y, c)
 
     def outline(self, c=OUTLINE):
-        """只沿外轮廓扩 1px（内部缝隙自然被同一颜色填掉）。"""
+        """只沿外轮廓扩 1px（内部缝隙会被同一颜色填掉，正好当分界线）。"""
         add = []
         for y in range(H):
             for x in range(W):
@@ -92,63 +95,72 @@ class Canvas(object):
 
 
 def draw_head(cv, facing, bob):
+    """头：长发、收窄的下巴、2×2 的眼睛 + 一点点腮红。"""
     top = HAIR_TOP + bob
     chin = CHIN + bob
+    mid = (top + chin) // 2
 
     if facing == 'side':
-        # 侧面：后脑在左、脸朝右；头身宽度和正面保持一致，才像同一个人转过去
-        mid = (top + chin) // 2
         cv.ellipse(16, mid + 1, 5, 6, SKIN)
-        cv.ellipse(12, top + 4, 4, 4, HAIR)                                   # 后脑头发
-        cv.rect(10, top + 4, 15, chin - 2, HAIR)
-        cv.rect(11, top + 1, 19, top + 3, HAIR)                               # 头顶头发
-        cv.rect(11, top + 2, 14, top + 3, HAIR_L)
-        cv.put(19, mid + 1, EYE)                                              # 一只眼
-        cv.put(18, mid + 4, SKIN_D)                                           # 嘴角
-        cv.rect(17, chin - 2, 18, chin - 2, SKIN_D)                           # 下巴阴影
+        cv.ellipse(12, top + 4, 4, 4, HAIR)                 # 后脑
+        cv.rect(9, top + 4, 14, chin + 5, HAIR)             # 长发垂到肩下
+        cv.rect(11, top + 1, 19, top + 3, HAIR)             # 头顶
+        cv.rect(11, top + 2, 14, top + 3, HAIR_L)           # 高光
+        cv.rect(18, mid, 19, mid + 1, EYE)                  # 一只眼
+        cv.put(19, mid + 3, BLUSH)                          # 腮红
+        cv.put(18, chin - 2, SKIN_D)                        # 嘴
     else:
-        # 正面 / 背面：同一个头型，背面把脸换成头发
-        cv.ellipse(16, (top + chin) // 2 + 1, 6, 6, SKIN)
-        cv.ellipse(16, top + 4, 6, 3, HAIR)
-        cv.rect(10, top + 4, 21, top + 6, HAIR)                               # 头发主体
-        cv.rect(11, top + 2, 17, top + 3, HAIR_L)                             # 发顶高光
-        if facing == 'down':
-            cv.rect(10, top + 7, 12, top + 8, HAIR)                           # 左侧刘海
-            cv.rect(19, top + 7, 21, top + 7, HAIR)                           # 右侧刘海
-            cv.rect(12, (top + chin) // 2 + 1, 13, (top + chin) // 2 + 2, EYE)
-            cv.rect(18, (top + chin) // 2 + 1, 19, (top + chin) // 2 + 2, EYE)
-            cv.put(15, chin - 2, SKIN_D)                                      # 嘴
-        else:
-            cv.rect(10, top + 6, 21, chin - 1, HAIR)                          # 后脑全是头发
-            cv.rect(12, top + 3, 19, top + 6, HAIR_L)
+        cv.ellipse(16, mid + 2, 5, 5, SKIN)                 # 脸收窄
+        cv.ellipse(16, top + 3, 5, 3, HAIR)     # 往上挪一格，别在眼睛那一行留一颗头发
+        cv.rect(11, top + 4, 20, top + 6, HAIR)
+        cv.rect(12, top + 2, 17, top + 3, HAIR_L)
 
-    # 脖子
-    cv.rect(14, chin + 1, 17, NECK + bob + 1, SKIN_D)
+        if facing == 'down':
+            cv.rect(10, top + 6, 11, chin + 5, HAIR)        # 左侧长发
+            cv.rect(20, top + 6, 21, chin + 5, HAIR)        # 右侧长发
+            cv.put(11, top + 7, HAIR)                       # 刘海只垂一格，不压到眼睛
+            cv.rect(13, chin - 5, 14, chin - 4, EYE)        # 左眼
+            cv.rect(17, chin - 5, 18, chin - 4, EYE)        # 右眼
+            cv.rect(15, chin - 2, 16, chin - 2, SKIN_D)     # 嘴
+            cv.put(12, chin - 3, BLUSH)                     # 腮红
+            cv.put(19, chin - 3, BLUSH)
+        else:
+            cv.rect(10, top + 4, 21, chin + 6, HAIR)        # 背面整片长发
+            cv.rect(13, top + 7, 18, chin + 5, HAIR_L)      # 中间纵向亮带
+            cv.rect(11, top + 2, 20, top + 4, HAIR)         # 头顶
+            cv.rect(12, top + 3, 17, top + 3, HAIR_L)
+
+    cv.rect(14, chin + 1, 17, NECK + bob + 1, SKIN_D)       # 脖子
 
 
 def draw_torso(cv, facing, bob):
     t = TORSO_TOP + bob
     b = TORSO_BOT + bob
-    # 三个朝向共用同一套躯干轮廓 —— 侧向只靠「头转过去 + 腿前后错位」表达，
-    # 这样三个角度看起来是同一个人，而不是三种不同的体型。
-    cv.rect(11, t, 20, b, SHIRT)
-    cv.rect(11, t, 12, b, SHIRT_D)          # 左侧阴影
-    cv.rect(19, t, 20, b, SHIRT_D)          # 右侧阴影
-    cv.rect(11, b, 20, b + 1, BELT)         # 腰带
+    cv.rect(11, t, 20, t + 4, SHIRT)                        # 肩
+    cv.rect(12, t + 5, 19, b, SHIRT)                        # 收腰
+    cv.rect(11, t, 12, t + 4, SHIRT_D)
+    cv.rect(19, t, 20, t + 4, SHIRT_D)
+    cv.rect(12, t + 5, 13, b, SHIRT_D)
+    cv.rect(18, t + 5, 19, b, SHIRT_D)
     if facing == 'down':
-        cv.rect(15, t + 1, 16, t + 6, SHIRT_D)   # 前襟
-    elif facing == 'side':
-        cv.rect(14, t + 1, 17, t + 7, SHIRT_D)   # 侧身时衣服的走向
+        cv.rect(15, t + 1, 16, t + 5, SHIRT_D)              # 前襟
+
+
+def draw_skirt(cv, facing, bob):
+    t = SKIRT_TOP + bob
+    b = SKIRT_BOT + bob
+    for i, y in enumerate(range(t, b + 1)):
+        inset = 1 if i < 2 else 0                           # 腰窄摆宽
+        cv.rect(11 - inset, y, 20 + inset, y, SKIRT)
+    cv.rect(11, t, 20, t, SKIRT_D)                          # 腰头
+    cv.rect(10, b, 21, b, SKIRT_D)                          # 裙摆压边
 
 
 def draw_arms(cv, facing, phase, bob):
-    """
-    手臂摆在躯干外侧，中间留一列透明——描边会把它填深色，手臂才是一截独立的肢体。
-    （第一版把手臂贴着躯干画，轮廓连成一片，等于没有手。）
-    """
+    """手臂在躯干外侧，中间留一列透明——描边填上后手臂才是一截独立肢体。"""
     t = TORSO_TOP + bob + 1
     b = TORSO_BOT + bob + 1
-    swing = (-1, 0, 1, 0)[phase]     # -1 前 / +1 后
+    swing = (-1, 0, 1, 0)[phase]                            # -1 前 / +1 后
     cv.rect(8, t + max(0, swing), 9, b - 1 + min(0, swing), SHIRT_D)
     cv.rect(22, t + max(0, -swing), 23, b - 1 + min(0, -swing), SHIRT_D)
     cv.rect(8, b + min(0, swing), 9, b + min(0, swing), SKIN)
@@ -156,38 +168,34 @@ def draw_arms(cv, facing, phase, bob):
 
 
 def draw_legs(cv, facing, phase, bob):
-    """
-    4 帧：左腿前 / 并拢 / 右腿前 / 并拢。
-    两腿之间留一列透明，描边会把它填成深色，腿才分得开。
-    """
+    """4 帧：左腿前 / 抬左腿 / 右腿前 / 抬右腿。"""
     t = LEG_TOP + bob
     b = FOOT_BOT + bob
     lead = (-1, 0, 1, 0)[phase]
 
     if facing == 'side':
-        # 侧面：后腿深、前腿浅，靠前后错位读出走路
-        back = 12 - lead
+        back = 13 - lead
         front = 16 + lead
-        cv.rect(back, t, back + 3, b - 1, PANTS_D)
-        cv.rect(back - 1, b - 1, back + 3, b, SHOE)
-        cv.rect(front, t, front + 3, b - 2 - max(0, lead), PANTS)
-        cv.rect(front - 1, b - 1, front + 4, b - max(0, lead), SHOE)
+        cv.rect(back, t, back + 2, b - 1, SKIN_D)
+        cv.rect(back - 1, b - 1, back + 2, b, SHOE)
+        cv.rect(front, t, front + 2, b - 2 - max(0, lead), SKIN)
+        cv.rect(front - 1, b - 1, front + 3, b - max(0, lead), SHOE)
         return
 
     lx, rx = 12, 17
-    # 4 帧各自不同：左前 / 抬左腿 / 右前 / 抬右腿
     lift_l = (-1 if lead > 0 else 0) if phase % 2 == 0 else -1
     lift_r = (-1 if lead < 0 else 0) if phase % 2 == 0 else 0
-    cv.rect(lx, t, lx + 3, b - 2 + lift_l, PANTS)
-    cv.rect(lx - 1, b - 1 + lift_l, lx + 3, b + lift_l, SHOE)
-    cv.rect(rx, t, rx + 3, b - 2 + lift_r, PANTS_D)
-    cv.rect(rx, b - 1 + lift_r, rx + 4, b + lift_r, SHOE)
+    cv.rect(lx, t, lx + 2, b - 2 + lift_l, SKIN)
+    cv.rect(lx - 1, b - 1 + lift_l, lx + 2, b + lift_l, SHOE)
+    cv.rect(rx, t, rx + 2, b - 2 + lift_r, SKIN_D)
+    cv.rect(rx - 1, b - 1 + lift_r, rx + 3, b + lift_r, SHOE)
 
 
 def render(facing, phase):
     bob = -1 if phase in (1, 3) else 0     # 中间两帧整体上移 1px，做出起伏
     cv = Canvas()
     draw_legs(cv, facing, phase, bob)
+    draw_skirt(cv, facing, bob)
     draw_torso(cv, facing, bob)
     draw_arms(cv, facing, phase, bob)
     draw_head(cv, facing, bob)
@@ -201,7 +209,7 @@ def main():
         for phase in range(4):
             render(facing, phase).save(
                 os.path.join(OUT_DIR, 'player_%s_%d.png' % (facing, phase)))
-    print('已写 12 帧 → %s' % OUT_DIR)
+    print('已写 12 帧（32x%d）→ %s' % (H, OUT_DIR))
 
     scale = 6
     sheet = Image.new('RGBA', (W * 4 * scale + 40, H * 3 * scale + 40), (58, 42, 31, 255))
