@@ -33,6 +33,7 @@ OUTLINE = (43, 28, 21, 255)      # #2B1C15
 SKIN = (237, 193, 155, 255)      # #EDC19B
 SKIN_D = (201, 150, 113, 255)    # #C99671
 HAIR = (74, 47, 34, 255)         # #4A2F22
+HAIR_M = (96, 63, 45, 255)       # #603F2D 中间调，做受光面，比 HAIR_L 柔和
 HAIR_L = (118, 78, 55, 255)      # #764E37
 SHIRT = (240, 230, 216, 255)     # #F0E6D8 奶白衬衫
 SHIRT_D = (211, 195, 174, 255)   # #D3C3AE
@@ -44,14 +45,16 @@ BOOT_D = (68, 44, 32, 255)       # #442C20 靴子暗部
 BOOT_HI = (128, 90, 64, 255)     # #805A40 靴口翻边 / 鞋头高光
 BOOT_SOLE = (150, 116, 84, 255)  # #967454 鞋底与跟（暖褐，别和描边同色）
 EYE = (32, 21, 16, 255)
+EYE_HI = (248, 240, 228, 255)    # 眼里的高光点，大头娃娃的「活气」全靠这一格
 BLUSH = (222, 156, 134, 255)     # #DE9C86
 
-HAIR_TOP = 5
-CHIN = 17
-NECK = 18
-TORSO_TOP = 19
-TORSO_BOT = 29
-SKIRT_TOP = 30
+# 大头娃娃比例（GBA 宝可梦那种）：头占身高约 38%，身子短、腿短。
+HEAD_TOP = 4
+CHIN = 21
+NECK = 22
+TORSO_TOP = 22
+TORSO_BOT = 30
+SKIRT_TOP = 31
 SKIRT_BOT = 36
 LEG_TOP = 37
 BOOT_TOP = 44
@@ -101,55 +104,62 @@ class Canvas(object):
 
 
 def draw_head(cv, facing, bob, rise=0):
-    """头：长发、收窄的下巴、2×2 的眼睛 + 一点点腮红。"""
-    top = HAIR_TOP + bob - rise
+    """大头：头宽几乎盖过肩膀，眼睛用 2×3 的色块 + 一格高光，靠色块读表情而不是描细节。"""
+    top = HEAD_TOP + bob - rise
     chin = CHIN + bob - rise
-    mid = (top + chin) // 2
 
     if facing == 'side':
-        cv.ellipse(16, mid + 1, 5, 6, SKIN)
-        cv.ellipse(12, top + 4, 4, 4, HAIR)                 # 后脑
-        cv.rect(9, top + 4, 14, chin + 5, HAIR)             # 长发垂到肩下
-        cv.rect(11, top + 1, 19, top + 3, HAIR)             # 头顶
-        cv.rect(11, top + 2, 14, top + 3, HAIR_L)           # 高光
-        cv.rect(18, mid, 19, mid + 1, EYE)                  # 一只眼
-        cv.put(19, mid + 3, BLUSH)                          # 腮红
-        cv.put(18, chin - 2, SKIN_D)                        # 嘴
+        cv.ellipse(12, top + 8, 7, 8, HAIR)                 # 后脑一整块
+        cv.ellipse(17, top + 7, 4, 6, HAIR)                 # 头顶前半，别让头顶变成方角
+        cv.rect(6, top + 5, 11, chin + 2, HAIR)             # 长发垂到肩
+        cv.ellipse(17, top + 12, 4, 5, SKIN)                # 脸（侧脸窄一点）
+        cv.rect(13, top + 5, 20, top + 6, HAIR)             # 刘海压到眉上
+        cv.rect(13, top + 7, 18, top + 8, HAIR)             # 斜刘海，盖住一块额头
+        cv.rect(13, top + 9, 15, top + 11, HAIR)            # 前面的长鬓角
+        cv.rect(10, top + 1, 15, top + 2, HAIR_M)           # 头顶高光
+        cv.rect(19, top + 10, 20, top + 12, EYE)            # 一只大眼
+        cv.put(19, top + 10, EYE_HI)
+        cv.put(18, chin - 4, BLUSH)                         # 腮红
+        cv.put(20, chin - 3, SKIN_D)                        # 嘴
     else:
-        cv.ellipse(16, mid + 2, 5, 5, SKIN)                 # 脸收窄
-        cv.ellipse(16, top + 3, 5, 3, HAIR)     # 往上挪一格，别在眼睛那一行留一颗头发
-        cv.rect(11, top + 4, 20, top + 6, HAIR)
-        cv.rect(12, top + 2, 17, top + 3, HAIR_L)
-
         if facing == 'down':
-            cv.rect(10, top + 6, 11, chin + 5, HAIR)        # 左侧长发
-            cv.rect(20, top + 6, 21, chin + 5, HAIR)        # 右侧长发
-            cv.put(11, top + 7, HAIR)                       # 刘海只垂一格，不压到眼睛
-            cv.rect(13, chin - 5, 14, chin - 4, EYE)        # 左眼
-            cv.rect(17, chin - 5, 18, chin - 4, EYE)        # 右眼
-            cv.rect(15, chin - 2, 16, chin - 2, SKIN_D)     # 嘴
-            cv.put(12, chin - 3, BLUSH)                     # 腮红
-            cv.put(19, chin - 3, BLUSH)
+            cv.ellipse(16, top + 6, 8, 7, HAIR)             # 头发外轮廓
+            cv.put(16, top - 1, CLEAR)                      # 削掉椭圆顶上的单颗像素，不然像天线
+            cv.rect(8, top + 5, 10, chin + 3, HAIR)         # 左侧长发
+            cv.rect(21, top + 5, 23, chin + 3, HAIR)        # 右侧长发
+            cv.ellipse(16, top + 11, 5, 5, SKIN)            # 脸
+            cv.rect(12, top + 15, 19, chin, SKIN)           # 下巴补方，别收成尖下巴
+            cv.rect(10, top + 3, 21, top + 6, HAIR)         # 刘海横条（压住额头）
+            cv.rect(10, top + 6, 12, top + 7, HAIR)         # 左鬓角
+            cv.rect(19, top + 6, 21, top + 7, HAIR)         # 右鬓角
+            cv.rect(13, top + 1, 17, top + 2, HAIR_M)       # 头顶高光
+            cv.rect(12, top + 9, 13, top + 11, EYE)         # 左眼 2×3
+            cv.rect(18, top + 9, 19, top + 11, EYE)         # 右眼 2×3
+            cv.put(12, top + 9, EYE_HI)
+            cv.put(18, top + 9, EYE_HI)
+            cv.rect(15, top + 14, 16, top + 14, SKIN_D)     # 嘴
+            cv.put(12, top + 13, BLUSH)
+            cv.put(19, top + 13, BLUSH)
         else:
-            cv.rect(10, top + 4, 21, chin + 6, HAIR)        # 背面整片长发
-            cv.rect(13, top + 7, 18, chin + 5, HAIR_L)      # 中间纵向亮带
-            cv.rect(11, top + 2, 20, top + 4, HAIR)         # 头顶
-            cv.rect(12, top + 3, 17, top + 3, HAIR_L)
+            cv.ellipse(16, top + 6, 8, 7, HAIR)             # 背面整片头发
+            cv.put(16, top - 1, CLEAR)                      # 同样削掉顶上那一颗
+            cv.rect(8, top + 5, 23, chin + 3, HAIR)         # 长发盖住脖子
+            cv.rect(13, top + 2, 18, top + 3, HAIR_M)       # 头顶受光，跟着头的弧度走
 
-    cv.rect(14, chin + 1, 17, NECK + bob + 1, SKIN_D)       # 脖子（底端固定，吸气时变长）
+    cv.rect(15, chin + 1, 16, NECK + bob + 1, SKIN_D)       # 脖子（底端固定，吸气时变长）
 
 
 def draw_torso(cv, facing, bob, rise=0):
     t = TORSO_TOP + bob - rise                              # 肩线上移，腰线不动 → 胸腔变高
     b = TORSO_BOT + bob
-    cv.rect(11, t, 20, t + 4, SHIRT)                        # 肩
-    cv.rect(12, t + 5, 19, b, SHIRT)                        # 收腰
-    cv.rect(11, t, 12, t + 4, SHIRT_D)
-    cv.rect(19, t, 20, t + 4, SHIRT_D)
-    cv.rect(12, t + 5, 13, b, SHIRT_D)
-    cv.rect(18, t + 5, 19, b, SHIRT_D)
+    cv.rect(11, t, 20, t + 3, SHIRT)                        # 肩
+    cv.rect(12, t + 4, 19, b, SHIRT)                        # 收腰
+    cv.rect(11, t, 12, t + 3, SHIRT_D)
+    cv.rect(19, t, 20, t + 3, SHIRT_D)
+    cv.rect(12, t + 4, 13, b, SHIRT_D)
+    cv.rect(18, t + 4, 19, b, SHIRT_D)
     if facing == 'down':
-        cv.rect(15, t + 1, 16, t + 5, SHIRT_D)              # 前襟
+        cv.rect(15, t + 1, 16, t + 4, SHIRT_D)              # 前襟
 
 
 def draw_skirt(cv, facing, bob):
@@ -173,8 +183,8 @@ def draw_arms(cv, facing, phase, bob, rise=0):
     t = TORSO_TOP + bob + 1 - rise
     b = TORSO_BOT + bob + 1
     swing = (-1, 0, 1, 0)[phase]                            # -1 前 / +1 后
-    cv.rect(8, t + max(0, swing), 9, b - 1 + min(0, swing), SHIRT_D)
-    cv.rect(22, t + max(0, -swing), 23, b - 1 + min(0, -swing), SHIRT_D)
+    cv.rect(8, t + max(0, swing), 9, b - 2 + min(0, swing), SHIRT_D)
+    cv.rect(22, t + max(0, -swing), 23, b - 2 + min(0, -swing), SHIRT_D)
     cv.rect(8, b + min(0, swing), 9, b + min(0, swing), SKIN)
     cv.rect(22, b + min(0, -swing), 23, b + min(0, -swing), SKIN)
 
