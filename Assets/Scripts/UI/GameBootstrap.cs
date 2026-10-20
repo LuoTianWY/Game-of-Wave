@@ -102,7 +102,19 @@ namespace WaveTeam.UI
            
             RefreshEnterBoardState();
             EnsureRoomCharacters();
+            EnsurePlayerAvatar();
             BuildObjectiveUI();
+        }
+
+        /// <summary>
+        /// 主角像素小人的运行时兜底：即使场景里还是旧版那个橙色方块，
+        /// 进游戏也会被换成带行走动画的小人（贴图和组件都在这里补上，不用重建场景）。
+        /// </summary>
+        private void EnsurePlayerAvatar()
+        {
+            var player = GameObject.Find("Player");
+            if (player == null) return;
+            PlayerAnimator.EnsureOn(player);
         }
 
 

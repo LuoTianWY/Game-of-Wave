@@ -4,6 +4,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
+using WaveTeam.Room;
 
 namespace WaveTeam.EditorTools
 {
@@ -29,6 +30,7 @@ namespace WaveTeam.EditorTools
         private const string CutoutDir = "Assets/Sprites/Room/CutoutV2/";
         private const string AutoRunPrefKey = "WaveTeam.RehearsalRoom.Built.v3";
         private const string VisualName = "Visual";             // Player 下的占位显示子物体
+        private const string PlayerSpriteAsset = "Assets/Resources/Characters/Player/player_down_0.png";
 
         /// <summary>毛坯占位对象：全部删掉，只留 Grid 和 Collision。</summary>
         private static readonly string[] BlockoutNames =
@@ -395,6 +397,26 @@ namespace WaveTeam.EditorTools
             // 重复执行时先删旧的，避免越跑越多
             var oldVisual = player.transform.Find(VisualName);
             if (oldVisual != null) Object.DestroyImmediate(oldVisual.gameObject);
+
+            // 优先用像素小人（脚底轴心、PPU 32 → 1.0×1.5 世界单位）。
+            // 这里必须引用**真实资源**，不能用运行时 Sprite.Create —— 编辑器脚本会把场景存盘，
+            // 运行时造的精灵存进去会变成 fileID: 0，重开场景主角就又没图了。
+            var playerSprite = AssetDatabase.LoadAssetAtPath<Sprite>(PlayerSpriteAsset);
+            if (playerSprite != null)
+            {
+                var avatar = new GameObject(VisualName);
+                avatar.transform.SetParent(player.transform, false);
+                avatar.transform.localPosition = new Vector3(0f, PlayerAnimator.FeetOffset, 0f);
+
+                var avatarSr = avatar.AddComponent<SpriteRenderer>();
+                avatarSr.sprite = playerSprite;
+                avatarSr.color = Color.white;
+                avatarSr.sortingOrder = Mathf.RoundToInt(-(player.transform.position.y + PlayerAnimator.FeetOffset) * 100f);
+
+                if (player.GetComponent<PlayerAnimator>() == null)
+                    player.AddComponent<PlayerAnimator>();
+                return;
+            }
 
             var sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Background.psd");
             if (sprite == null)
