@@ -21,21 +21,32 @@ namespace WaveTeam.Room
         /// <summary>Resources 下的目录名。</summary>
         public const string ResourceDir = "Characters/Player";
 
-        /// <summary>每秒帧数。8 帧/秒是像素游戏走路的常见节奏，再快会像在抽筋。</summary>
-        public const float Fps = 8f;
+        /// <summary>默认走路帧率。8 帧/秒是像素游戏走路的常见节奏，再快会像在抽筋。</summary>
+        public const float DefaultWalkFps = 8f;
 
         /// <summary>
-        /// 站立呼吸的节拍：2.5 帧/秒 × 6 拍 ≈ 2.4 秒一次呼吸。
+        /// 默认呼吸节拍：2.5 帧/秒 × 6 拍 ≈ 2.4 秒一次呼吸。
         /// 只有「吸气 / 呼气」两帧贴图，靠每拍停留 3 次的节奏把两帧撑出一个缓慢的起伏，
         /// 免得 1px 的变化一秒来回好几趟、看着像在发抖。
         /// </summary>
-        public const float IdleFps = 2.5f;
+        public const float DefaultIdleFps = 2.5f;
 
         /// <summary>一轮呼吸的节奏表：0 = 呼气（原样），1 = 吸气（胸腔抬起 1px）。</summary>
         private static readonly int[] BreathSteps = { 0, 0, 0, 1, 1, 1 };
 
         /// <summary>脚底相对 Player 轴心的偏移：胶囊体 0.5×1 居中，所以底边在 −0.5。</summary>
         public const float FeetOffset = -0.5f;
+
+        [Header("体型")]
+        [Tooltip("主角在世界里的身高（单位=1 格地板）。默认 1.625 就是贴图原尺寸，调大只往上长，脚不会陷进地面。")]
+        [SerializeField, Range(0.6f, 3f)] private float height = 1.625f;
+
+        [Header("动作频率")]
+        [Tooltip("走路每秒播放几帧。8 = 原来的节奏；调到 6 会显得更沉，12 会显得更急。")]
+        [SerializeField, Range(2f, 20f)] private float walkFps = DefaultWalkFps;
+
+        [Tooltip("站立呼吸每秒几拍。一整轮是 6 拍，所以一次呼吸的秒数 = 6 ÷ 这个值。2.5 ≈ 2.4 秒一次。")]
+        [SerializeField, Range(0.4f, 8f)] private float idleFps = DefaultIdleFps;
 
         private enum Facing { Down, Up, Side }
 
@@ -53,6 +64,8 @@ namespace WaveTeam.Room
         private float _timer;
         private int _idleStep;
         private float _idleTimer;
+        private Transform _visual;
+        private float _appliedHeight = float.NaN;
 
         /// <summary>给运行时兜底用：确保 Player 上有这个组件，并建好 Visual 子物体。</summary>
         public static PlayerAnimator EnsureOn(GameObject player)
@@ -92,7 +105,7 @@ namespace WaveTeam.Room
                 }
 
                 _timer += Time.deltaTime;
-                float step = 1f / Fps;
+                float step = 1f / Mathf.Max(0.1f, walkFps);
                 while (_timer >= step)
                 {
                     _timer -= step;
@@ -110,7 +123,7 @@ namespace WaveTeam.Room
                 _timer = 0f;
 
                 _idleTimer += Time.deltaTime;
-                float step = 1f / IdleFps;
+                float step = 1f / Mathf.Max(0.1f, idleFps);
                 while (_idleTimer >= step)
                 {
                     _idleTimer -= step;
@@ -119,6 +132,7 @@ namespace WaveTeam.Room
             }
 
             Apply();
+            ApplyHeight();
             UpdateSorting();
         }
 
@@ -198,13 +212,47 @@ namespace WaveTeam.Room
 
             _sr = child.GetComponent<SpriteRenderer>();
             if (_sr == null) _sr = child.gameObject.AddComponent<SpriteRenderer>();
+            _visual = child;
 
             // 贴图 PPU=32、轴心在脚底 → 直接把子物体放到胶囊底边，不用缩放
             child.localPosition = new Vector3(0f, FeetOffset, 0f);
-            child.localScale = Vector3.one;
             child.localRotation = Quaternion.identity;
             _sr.color = Color.white;
             _sr.flipX = false;
+
+            _appliedHeight = float.NaN;
+            ApplyHeight();
+        }
+
+        /// <summary>
+        /// 按 Inspector 里的身高缩放贴图。贴图轴心在脚底，所以放大时只往上长，脚钉在原地。
+        /// 每帧检查一次数值有没有变，这样 Play 的时候拖滑块也能立刻看到效果。
+        /// </summary>
+        private void ApplyHeight()
+        {
+            if (_visual == null) return;
+            if (Mathf.Approximately(height, _appliedHeight)) return;
+
+            var probe = FirstSprite();
+            float artHeight = (probe != null && probe.bounds.size.y > 0.001f)
+                ? probe.bounds.size.y
+                : 1.625f;                                   // 贴图还没导进来时的兜底
+
+            float s = Mathf.Max(0.01f, height) / artHeight;
+            _visual.localScale = new Vector3(s, s, 1f);
+            _appliedHeight = height;
+        }
+
+        /// <summary>随便找一张已经加载的帧，用来量这套贴图原本有多高。</summary>
+        private Sprite FirstSprite()
+        {
+            foreach (var set in new[] { _down, _up, _side, _idleDown, _idleUp, _idleSide })
+            {
+                if (set == null) continue;
+                foreach (var s in set)
+                    if (s != null) return s;
+            }
+            return null;
         }
     }
 }
