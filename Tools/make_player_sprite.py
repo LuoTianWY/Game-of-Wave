@@ -13,7 +13,8 @@
     这样三个角度看起来是同一个人，而不是三种体型。
 
 尺寸：32×52 @ PPU 32 → 1.0×1.625 世界单位（比 NPC 的 1.54 略高一点）。
-输出：Assets/Resources/Characters/Player/player_<dir>_<0..3>.png
+输出：Assets/Resources/Characters/Player/player_<dir>_<0..3>.png      行走 4 帧
+      Assets/Resources/Characters/Player/player_<dir>_idle_<0..1>.png  站立呼吸 2 帧
 导入：Point 采样、PPU 32、轴心 BottomCenter、不压缩。
 
 用法：python Tools/make_player_sprite.py
@@ -99,10 +100,10 @@ class Canvas(object):
         return im
 
 
-def draw_head(cv, facing, bob):
+def draw_head(cv, facing, bob, rise=0):
     """头：长发、收窄的下巴、2×2 的眼睛 + 一点点腮红。"""
-    top = HAIR_TOP + bob
-    chin = CHIN + bob
+    top = HAIR_TOP + bob - rise
+    chin = CHIN + bob - rise
     mid = (top + chin) // 2
 
     if facing == 'side':
@@ -135,11 +136,11 @@ def draw_head(cv, facing, bob):
             cv.rect(11, top + 2, 20, top + 4, HAIR)         # 头顶
             cv.rect(12, top + 3, 17, top + 3, HAIR_L)
 
-    cv.rect(14, chin + 1, 17, NECK + bob + 1, SKIN_D)       # 脖子
+    cv.rect(14, chin + 1, 17, NECK + bob + 1, SKIN_D)       # 脖子（底端固定，吸气时变长）
 
 
-def draw_torso(cv, facing, bob):
-    t = TORSO_TOP + bob
+def draw_torso(cv, facing, bob, rise=0):
+    t = TORSO_TOP + bob - rise                              # 肩线上移，腰线不动 → 胸腔变高
     b = TORSO_BOT + bob
     cv.rect(11, t, 20, t + 4, SHIRT)                        # 肩
     cv.rect(12, t + 5, 19, b, SHIRT)                        # 收腰
@@ -167,9 +168,9 @@ def draw_skirt(cv, facing, bob):
     cv.rect(10, b, 21, b, SKIRT_D)                          # 裙摆压边
 
 
-def draw_arms(cv, facing, phase, bob):
+def draw_arms(cv, facing, phase, bob, rise=0):
     """手臂在躯干外侧，中间留一列透明——描边填上后手臂才是一截独立肢体。"""
-    t = TORSO_TOP + bob + 1
+    t = TORSO_TOP + bob + 1 - rise
     b = TORSO_BOT + bob + 1
     swing = (-1, 0, 1, 0)[phase]                            # -1 前 / +1 后
     cv.rect(8, t + max(0, swing), 9, b - 1 + min(0, swing), SHIRT_D)
@@ -235,14 +236,14 @@ def draw_boot_side(cv, x0, top, ground):
     cv.put(x0 + 1, ground, BOOT_SOLE)                       # 细高跟
 
 
-def render(facing, phase):
+def render(facing, phase, rise=0):
     bob = -1 if phase in (1, 3) else 0     # 中间两帧整体上移 1px，做出起伏
     cv = Canvas()
     draw_legs(cv, facing, phase, bob)
     draw_skirt(cv, facing, bob)
-    draw_torso(cv, facing, bob)
-    draw_arms(cv, facing, phase, bob)
-    draw_head(cv, facing, bob)
+    draw_torso(cv, facing, bob, rise)
+    draw_arms(cv, facing, phase, bob, rise)
+    draw_head(cv, facing, bob, rise)
     cv.outline()
     return cv.image()
 
@@ -253,7 +254,10 @@ def main():
         for phase in range(4):
             render(facing, phase).save(
                 os.path.join(OUT_DIR, 'player_%s_%d.png' % (facing, phase)))
-    print('已写 12 帧（32x%d）→ %s' % (H, OUT_DIR))
+        for breathe in range(2):
+            render(facing, 0, rise=breathe).save(
+                os.path.join(OUT_DIR, 'player_%s_idle_%d.png' % (facing, breathe)))
+    print('已写 18 帧（32x%d，行走 12 + 呼吸 6）→ %s' % (H, OUT_DIR))
 
     scale = 6
     sheet = Image.new('RGBA', (W * 4 * scale + 40, H * 3 * scale + 40), (58, 42, 31, 255))
@@ -264,6 +268,16 @@ def main():
             sheet.alpha_composite(im, (10 + c * W * scale, 10 + r * H * scale))
     sheet.save(os.path.join(ROOT, 'Tools', '_playersprite_preview.png'))
     print('样张 → Tools/_playersprite_preview.png')
+
+    # 呼吸两帧单独出一张对照图，方便看 1px 的胸腔起伏
+    idle = Image.new('RGBA', (W * 2 * scale + 30, H * 3 * scale + 40), (58, 42, 31, 255))
+    for r, facing in enumerate(('down', 'up', 'side')):
+        for c in range(2):
+            im = Image.open(os.path.join(OUT_DIR, 'player_%s_idle_%d.png' % (facing, c)))
+            im = im.resize((W * scale, H * scale), Image.NEAREST)
+            idle.alpha_composite(im, (10 + c * W * scale, 10 + r * H * scale))
+    idle.save(os.path.join(ROOT, 'Tools', '_playeridle_preview.png'))
+    print('呼吸样张 → Tools/_playeridle_preview.png')
 
 
 if __name__ == '__main__':

@@ -5,8 +5,9 @@ namespace WaveTeam.Room
     /// <summary>
     /// 主角的像素小人 + 行走动画。
     ///
-    /// 素材：Assets/Resources/Characters/Player/player_&lt;down|up|side&gt;_&lt;0..3&gt;.png，
-    /// 每帧 32×48、PPU 32（= 1.0×1.5 世界单位）、轴心在脚底。
+    /// 素材：Assets/Resources/Characters/Player/player_&lt;down|up|side&gt;_&lt;0..3&gt;.png        行走
+    ///       Assets/Resources/Characters/Player/player_&lt;down|up|side&gt;_idle_&lt;0..1&gt;.png  站立呼吸
+    /// 每帧 32×52、PPU 32（= 1.0×1.625 世界单位）、轴心在脚底。
     /// 由 Tools/make_player_sprite.py 生成，改了配色或体型重跑那个脚本即可。
     ///
     /// 朝向按输入的主轴决定（和 PlayerMovement 用的是同一套 Input.GetAxisRaw）：
@@ -23,6 +24,16 @@ namespace WaveTeam.Room
         /// <summary>每秒帧数。8 帧/秒是像素游戏走路的常见节奏，再快会像在抽筋。</summary>
         public const float Fps = 8f;
 
+        /// <summary>
+        /// 站立呼吸的节拍：2.5 帧/秒 × 6 拍 ≈ 2.4 秒一次呼吸。
+        /// 只有「吸气 / 呼气」两帧贴图，靠每拍停留 3 次的节奏把两帧撑出一个缓慢的起伏，
+        /// 免得 1px 的变化一秒来回好几趟、看着像在发抖。
+        /// </summary>
+        public const float IdleFps = 2.5f;
+
+        /// <summary>一轮呼吸的节奏表：0 = 呼气（原样），1 = 吸气（胸腔抬起 1px）。</summary>
+        private static readonly int[] BreathSteps = { 0, 0, 0, 1, 1, 1 };
+
         /// <summary>脚底相对 Player 轴心的偏移：胶囊体 0.5×1 居中，所以底边在 −0.5。</summary>
         public const float FeetOffset = -0.5f;
 
@@ -32,10 +43,16 @@ namespace WaveTeam.Room
         private Sprite[] _down = new Sprite[4];
         private Sprite[] _up = new Sprite[4];
         private Sprite[] _side = new Sprite[4];
+        private Sprite[] _idleDown = new Sprite[2];
+        private Sprite[] _idleUp = new Sprite[2];
+        private Sprite[] _idleSide = new Sprite[2];
         private Facing _facing = Facing.Down;
         private bool _flip;
+        private bool _moving;
         private int _frame;
         private float _timer;
+        private int _idleStep;
+        private float _idleTimer;
 
         /// <summary>给运行时兜底用：确保 Player 上有这个组件，并建好 Visual 子物体。</summary>
         public static PlayerAnimator EnsureOn(GameObject player)
@@ -58,6 +75,7 @@ namespace WaveTeam.Room
             float h = Input.GetAxisRaw("Horizontal");
             float v = Input.GetAxisRaw("Vertical");
             bool moving = Mathf.Abs(h) > 0.01f || Mathf.Abs(v) > 0.01f;
+            _moving = moving;
 
             if (moving)
             {
@@ -80,12 +98,24 @@ namespace WaveTeam.Room
                     _timer -= step;
                     _frame = (_frame + 1) % 4;
                 }
+
+                // 走动时把呼吸归零，停下后再从「呼气」慢慢起伏，不会突然弹一下
+                _idleStep = 0;
+                _idleTimer = 0f;
             }
             else
             {
-                // 站住时回到第 0 帧（双脚着地的那一帧）
+                // 站住时回到第 0 帧（双脚着地的那一帧），并开始呼吸
                 _frame = 0;
                 _timer = 0f;
+
+                _idleTimer += Time.deltaTime;
+                float step = 1f / IdleFps;
+                while (_idleTimer >= step)
+                {
+                    _idleTimer -= step;
+                    _idleStep = (_idleStep + 1) % BreathSteps.Length;
+                }
             }
 
             Apply();
@@ -96,7 +126,16 @@ namespace WaveTeam.Room
         {
             if (_sr == null) return;
             var set = _facing == Facing.Up ? _up : (_facing == Facing.Side ? _side : _down);
-            if (set != null && set[_frame] != null) _sr.sprite = set[_frame];
+            var idle = _facing == Facing.Up ? _idleUp : (_facing == Facing.Side ? _idleSide : _idleDown);
+
+            Sprite next = null;
+            if (!_moving)
+            {
+                int breathe = BreathSteps[_idleStep];
+                if (idle != null && breathe < idle.Length) next = idle[breathe];
+            }
+            if (next == null && set != null && _frame < set.Length) next = set[_frame];
+            if (next != null) _sr.sprite = next;
             _sr.flipX = _flip;
         }
 
@@ -123,17 +162,27 @@ namespace WaveTeam.Room
             foreach (var s in all)
             {
                 if (s == null) continue;
-                string n = s.name;                                  // player_down_0
-                int cut = n.LastIndexOf('_');
-                if (cut <= 0) continue;
-                int idx;
-                if (!int.TryParse(n.Substring(cut + 1), out idx) || idx < 0 || idx > 3) continue;
+                // player_down_0 / player_down_idle_0
+                var parts = s.name.Split('_');
+                if (parts.Length < 3 || parts[0] != "player") continue;
 
-                string dir = n.Substring(0, cut);
-                if (dir.EndsWith("down")) _down[idx] = s;
-                else if (dir.EndsWith("up")) _up[idx] = s;
-                else if (dir.EndsWith("side")) _side[idx] = s;
+                int idx;
+                if (!int.TryParse(parts[parts.Length - 1], out idx)) continue;
+
+                bool idle = parts.Length >= 4 && parts[2] == "idle";
+                switch (parts[1])
+                {
+                    case "down": Put(idle ? _idleDown : _down, idx, s); break;
+                    case "up": Put(idle ? _idleUp : _up, idx, s); break;
+                    case "side": Put(idle ? _idleSide : _side, idx, s); break;
+                }
             }
+        }
+
+        /// <summary>越界的帧号直接忽略——多放一张图进文件夹也不会让动画报错。</summary>
+        private static void Put(Sprite[] set, int idx, Sprite s)
+        {
+            if (set != null && idx >= 0 && idx < set.Length) set[idx] = s;
         }
 
         /// <summary>找到（或建出）Visual 子物体，把 SpriteRenderer 调成贴图要求的参数。</summary>
