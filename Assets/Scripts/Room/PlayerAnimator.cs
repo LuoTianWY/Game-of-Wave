@@ -25,11 +25,11 @@ namespace WaveTeam.Room
         public const float DefaultWalkFps = 8f;
 
         /// <summary>
-        /// 默认呼吸节拍：2.5 帧/秒 × 6 拍 ≈ 2.4 秒一次呼吸。
+        /// 默认呼吸节拍：5 帧/秒 × 6 拍 ≈ 1.2 秒一次呼吸。
         /// 只有「吸气 / 呼气」两帧贴图，靠每拍停留 3 次的节奏把两帧撑出一个缓慢的起伏，
         /// 免得 1px 的变化一秒来回好几趟、看着像在发抖。
         /// </summary>
-        public const float DefaultIdleFps = 2.5f;
+        public const float DefaultIdleFps = 5f;
 
         /// <summary>一轮呼吸的节奏表：0 = 呼气（原样），1 = 吸气（胸腔抬起 1px）。</summary>
         private static readonly int[] BreathSteps = { 0, 0, 0, 1, 1, 1 };
@@ -38,14 +38,14 @@ namespace WaveTeam.Room
         public const float FeetOffset = -0.5f;
 
         [Header("体型")]
-        [Tooltip("主角在世界里的身高（单位=1 格地板）。默认 1.625 就是贴图原尺寸，调大只往上长，脚不会陷进地面。")]
-        [SerializeField, Range(0.6f, 3f)] private float height = 1.625f;
+        [Tooltip("主角在世界里的身高（单位=1 格地板）。贴图原尺寸是 1.625，调大只往上长，脚不会陷进地面。")]
+        [SerializeField, Range(0.6f, 3f)] private float height = 1.75f;
 
         [Header("动作频率")]
         [Tooltip("走路每秒播放几帧。8 = 原来的节奏；调到 6 会显得更沉，12 会显得更急。")]
         [SerializeField, Range(2f, 20f)] private float walkFps = DefaultWalkFps;
 
-        [Tooltip("站立呼吸每秒几拍。一整轮是 6 拍，所以一次呼吸的秒数 = 6 ÷ 这个值。2.5 ≈ 2.4 秒一次。")]
+        [Tooltip("站立呼吸每秒几拍。一整轮是 6 拍，所以一次呼吸的秒数 = 6 ÷ 这个值。5 ≈ 1.2 秒一次。")]
         [SerializeField, Range(0.4f, 8f)] private float idleFps = DefaultIdleFps;
 
         private enum Facing { Down, Up, Side }
