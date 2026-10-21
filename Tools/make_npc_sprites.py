@@ -199,9 +199,8 @@ def draw_lower(cv, c):
     cv.rect(17, top, 17, 45, light(pants_d, 0.12))
 
     for x0, col in ((12, shoe), (17, shoe)):
-        cv.rect(x0 - 1, 46, x0 + 2, 48, col)                # 鞋面
-        cv.rect(x0 - 1, 49, x0 + 2, 49, shoe_d)             # 鞋底
-        cv.rect(x0, 50, x0 + 1, 50, dark(shoe_d, 0.85))     # 鞋跟落地
+        cv.rect(x0 - 1, 46, x0 + 2, 49, col)                # 鞋面
+        cv.rect(x0 - 1, 50, x0 + 2, 50, shoe_d)             # 平鞋底
         if c['shoe_style'] == 'sneaker':
             cv.rect(x0, 47, x0 + 1, 47, light(col, 0.35))   # 鞋带高光
 
@@ -224,10 +223,9 @@ def draw_skirt(cv, c):
     cv.rect(12, 37, 14, 43, skin)                           # 左腿
     cv.rect(17, 37, 19, 43, skin_d)                         # 右腿
     for x0, s in ((12, True), (17, False)):
-        cv.rect(x0 - 1, 44, x0 + 2, 48, boot)               # 靴筒
+        cv.rect(x0 - 1, 44, x0 + 2, 49, boot)               # 靴筒
         cv.rect(x0 - 1, 44, x0 + 2, 44, dark(boot, 0.8))
-        cv.rect(x0 - 1, 49, x0 + 2, 49, boot_d)             # 鞋底
-        cv.put(x0, 50, boot_d)                              # 细跟
+        cv.rect(x0 - 1, 50, x0 + 2, 50, boot_d)             # 平鞋底
 
 
 NPC = [

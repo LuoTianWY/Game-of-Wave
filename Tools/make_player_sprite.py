@@ -222,28 +222,29 @@ def draw_legs(cv, facing, phase, bob):
 
 
 def draw_boot_front(cv, x0, top, ground, lift, out):
-    """正面 / 背面视角的高跟踝靴。out=±1 表示鞋底朝外侧扩一格。"""
+    """正面 / 背面视角的短靴。out=±1 表示鞋底朝外侧扩一格。
+
+    鞋底做成一整行平的：原先脚底中间多出来的一颗「跟」在游戏里就是个尖尖。
+    """
     t = top + lift
     g = ground + lift
     cv.rect(x0, t, x0 + 2, t, BOOT_HI)                      # 靴口翻边
-    cv.rect(x0, t + 1, x0 + 2, g - 2, BOOT)                 # 靴筒
-    cv.rect(x0 + 2, t + 1, x0 + 2, g - 2, BOOT_D)           # 内侧暗部
+    cv.rect(x0, t + 1, x0 + 2, g - 1, BOOT)                 # 靴筒
+    cv.rect(x0 + 2, t + 1, x0 + 2, g - 1, BOOT_D)           # 内侧暗部
     cv.put(x0 + 1, t + 2, BOOT_HI)                          # 皮面一点高光
     sx0 = x0 - 1 if out < 0 else x0                         # 鞋底外扩
     sx1 = x0 + 2 if out < 0 else x0 + 3
-    cv.rect(sx0, g - 1, sx1, g - 1, BOOT_SOLE)              # 鞋底
-    cv.put(x0 + 1, g, BOOT_SOLE)                            # 细高跟
+    cv.rect(sx0, g, sx1, g, BOOT_SOLE)                      # 平底
 
 
 def draw_boot_side(cv, x0, top, ground):
-    """侧视高跟踝靴：脚尖朝 +x 多伸两格，后跟只有一格宽。"""
+    """侧视短靴：脚尖朝 +x 多伸两格，鞋底整行是平的。"""
     cv.rect(x0, top, x0 + 2, top, BOOT_HI)                  # 靴口翻边
     cv.rect(x0, top + 1, x0 + 2, ground - 2, BOOT)          # 靴筒
     cv.rect(x0, top + 1, x0, ground - 2, BOOT_D)            # 后侧暗部
-    cv.rect(x0 + 1, ground - 2, x0 + 3, ground - 2, BOOT)   # 脚背
-    cv.put(x0 + 3, ground - 2, BOOT_HI)                     # 鞋尖高光
-    cv.rect(x0, ground - 1, x0 + 3, ground - 1, BOOT_SOLE)  # 鞋底
-    cv.put(x0 + 1, ground, BOOT_SOLE)                       # 细高跟
+    cv.rect(x0, ground - 1, x0 + 3, ground - 1, BOOT)       # 脚背连到脚尖
+    cv.put(x0 + 3, ground - 1, BOOT_HI)                     # 鞋尖高光
+    cv.rect(x0, ground, x0 + 3, ground, BOOT_SOLE)          # 平底
 
 
 def render(facing, phase, rise=0):
