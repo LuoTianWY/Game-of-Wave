@@ -24,7 +24,12 @@ namespace WaveTeam.Room
         private const float BodyW = 0.62f;
         private const float BodyH = 1.10f;
         private const float HeadSize = 0.44f;
-        private const float TotalHeight = BodyH + HeadSize;   // 1.54
+        private const float TotalHeight = BodyH + HeadSize;   // 1.54（方块兜底用）
+
+        /// <summary>
+        /// 像素小人统一按主角的身高来。找不到主角组件时用主角的默认身高 1.75。
+        /// </summary>
+        private const float FallbackHeight = 1.75f;
 
         private const float NamePixelScale = 0.020f;          // 一个字体像素 = 0.02 世界单位
         private const float PromptPixelScale = 0.016f;
@@ -37,6 +42,7 @@ namespace WaveTeam.Room
         private PixelText _promptText;
         private Color _bodyColor;
         private bool _usingSprite;
+        private float _height = FallbackHeight;
 
         /// <summary>角色名 → Resources/Characters/Npc 下的贴图名。</summary>
         private static readonly Dictionary<string, string> SpriteKeys =
@@ -69,6 +75,7 @@ namespace WaveTeam.Room
         {
             Profile = profile;
             _bodyColor = TraitColor.Of(profile.Trait);
+            _height = ResolveHeight();
 
             int order = SortingOrderFor(transform.position.y);
 
@@ -105,7 +112,7 @@ namespace WaveTeam.Room
             sr.sortingOrder = order;
 
             float artHeight = sprite.bounds.size.y;
-            float scale = artHeight > 0.001f ? TotalHeight / artHeight : 1f;
+            float scale = artHeight > 0.001f ? _height / artHeight : 1f;
             go.transform.localScale = new Vector3(scale, scale, 1f);
 
             _body = sr;
@@ -118,6 +125,21 @@ namespace WaveTeam.Room
             string key;
             if (profileName == null || !SpriteKeys.TryGetValue(profileName, out key)) return null;
             return Resources.Load<Sprite>("Characters/Npc/npc_" + key);
+        }
+
+        /// <summary>
+        /// 取主角当前的身高，让 NPC 和主角一样高。主角还没生成时退回默认值，
+        /// 之后主角在 Inspector 里改了身高，NPC 也会跟着变。
+        /// </summary>
+        private static float ResolveHeight()
+        {
+            var player = GameObject.Find("Player");
+            if (player != null)
+            {
+                var animator = player.GetComponent<PlayerAnimator>();
+                if (animator != null && animator.WorldHeight > 0.1f) return animator.WorldHeight;
+            }
+            return FallbackHeight;
         }
 
         private SpriteRenderer MakeBlock(string name, Vector2 size, Vector3 localPos,
@@ -158,9 +180,9 @@ namespace WaveTeam.Room
             rt.pivot = new Vector2(0.5f, 0f);
             rt.localScale = Vector3.one;
             rt.sizeDelta = new Vector2(3f, CanvasH);
-            rt.localPosition = new Vector3(0f, TotalHeight + 0.30f, 0f);   // 下沿 = 1.84
+            rt.localPosition = new Vector3(0f, _height + 0.30f, 0f);       // 名牌跟着身高走
 
-            // 名字贴顶边 → 实际占 2.30 ~ 2.64，比头顶(1.54)高出 0.76
+            // 名字贴顶边，始终比头顶高出 0.76
             var name = PixelText.Create("Name", rt, Profile.Name, NamePixelScale,
                                         Color.white, PixelText.Align.Center);
             var nrt = (RectTransform)name.transform;

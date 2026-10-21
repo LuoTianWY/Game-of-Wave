@@ -48,6 +48,9 @@ namespace WaveTeam.Room
         [Tooltip("站立呼吸每秒几拍。一整轮是 6 拍，所以一次呼吸的秒数 = 6 ÷ 这个值。5 ≈ 1.2 秒一次。")]
         [SerializeField, Range(0.4f, 8f)] private float idleFps = DefaultIdleFps;
 
+        /// <summary>当前设定的世界身高（读给别的系统用，比如让 NPC 和主角一样高）。</summary>
+        public float WorldHeight { get { return height; } }
+
         private enum Facing { Down, Up, Side }
 
         private SpriteRenderer _sr;
