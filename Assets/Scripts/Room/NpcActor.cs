@@ -34,6 +34,10 @@ namespace WaveTeam.Room
         private const float NamePixelScale = 0.020f;          // 一个字体像素 = 0.02 世界单位
         private const float PromptPixelScale = 0.016f;
 
+        /// <summary>站立呼吸：和主角同频（5 拍/秒 × 6 拍一轮 ≈ 1.2 秒）。</summary>
+        private const float BreathFps = PlayerAnimator.DefaultIdleFps;
+        private static readonly int[] BreathPattern = { 0, 0, 0, 1, 1, 1 };
+
         private static Sprite _blockSprite;
 
         private SpriteRenderer _body;
@@ -43,6 +47,9 @@ namespace WaveTeam.Room
         private Color _bodyColor;
         private bool _usingSprite;
         private float _height = FallbackHeight;
+        private readonly Sprite[] _breathFrames = new Sprite[2];
+        private int _breathStep;
+        private float _breathTimer;
 
         /// <summary>角色名 → Resources/Characters/Npc 下的贴图名。</summary>
         private static readonly Dictionary<string, string> SpriteKeys =
@@ -95,7 +102,7 @@ namespace WaveTeam.Room
             var sprite = LoadSprite(profile.Name);
             if (sprite != null)
             {
-                BuildSprite(sprite, order);
+                BuildSprite(sprite, LoadSprite(profile.Name, "_breath"), order);
             }
             else
             {
@@ -113,7 +120,7 @@ namespace WaveTeam.Room
         /// 用像素小人立起来。贴图是 32×52、轴心在脚底的素材，
         /// 这里统一缩到和原先占位块一样高（1.54），名牌位置就不用动。
         /// </summary>
-        private void BuildSprite(Sprite sprite, int order)
+        private void BuildSprite(Sprite sprite, Sprite breathSprite, int order)
         {
             var go = new GameObject("Visual");
             go.transform.SetParent(transform, false);
@@ -131,13 +138,34 @@ namespace WaveTeam.Room
             _body = sr;
             _bodyColor = Color.white;
             _usingSprite = true;
+            _breathFrames[0] = sprite;
+            _breathFrames[1] = breathSprite;
         }
 
-        private static Sprite LoadSprite(string profileName)
+        private static Sprite LoadSprite(string profileName, string suffix = "")
         {
             string key;
             if (profileName == null || !SpriteKeys.TryGetValue(profileName, out key)) return null;
-            return Resources.Load<Sprite>("Characters/Npc/npc_" + key);
+            return Resources.Load<Sprite>("Characters/Npc/npc_" + key + suffix);
+        }
+
+        /// <summary>
+        /// 站立呼吸：两帧（呼气 / 吸气胸腔抬 1px），节奏表和主角完全一致。
+        /// 所有 NPC 同时生成，所以它们的呼吸是齐的。
+        /// </summary>
+        private void Update()
+        {
+            if (_body == null || _breathFrames[1] == null) return;
+
+            _breathTimer += Time.deltaTime;
+            float step = 1f / Mathf.Max(0.1f, BreathFps);
+            while (_breathTimer >= step)
+            {
+                _breathTimer -= step;
+                _breathStep = (_breathStep + 1) % BreathPattern.Length;
+            }
+
+            _body.sprite = BreathPattern[_breathStep] == 0 ? _breathFrames[0] : _breathFrames[1];
         }
 
         /// <summary>

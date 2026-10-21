@@ -40,8 +40,8 @@ def light(c, k=0.18):
             int(c[2] + (255 - c[2]) * k), 255)
 
 
-def draw_head(cv, c):
-    top, chin = HEAD_TOP, CHIN
+def draw_head(cv, c, rise=0):
+    top, chin = HEAD_TOP - rise, CHIN - rise
     hair, skin, skin_d = c['hair'], c['skin'], c['skin_d']
     hair_l = light(hair, 0.10)
     style = c['hair_style']
@@ -116,25 +116,25 @@ def draw_head(cv, c):
         cv.put(12, top + 13, BLUSH)
         cv.put(19, top + 13, BLUSH)
 
-    cv.rect(15, chin + 1, 16, chin + 1, skin_d)             # 脖子
+    cv.rect(15, chin + 1, 16, CHIN + 1, skin_d)             # 脖子（底端固定，吸气时变长）
 
 
-def draw_arms(cv, c):
+def draw_arms(cv, c, rise=0):
     """手臂统一画到 33 行（大腿根），比原来多两格，上身看起来才不短。"""
     shirt = c['top']
     shirt_d = c['top_d']
     skin = c['skin']
     left = c.get('wide', False) and 7 or 8
     right = c.get('wide', False) and 24 or 23
-    cv.rect(left, 23, left + 1, 32, shirt_d)
-    cv.rect(right - 1, 23, right, 32, shirt_d)
+    cv.rect(left, 23 - rise, left + 1, 32, shirt_d)
+    cv.rect(right - 1, 23 - rise, right, 32, shirt_d)
     cv.rect(left, 33, left + 1, 33, skin)
     cv.rect(right - 1, 33, right, 33, skin)
 
 
-def draw_torso(cv, c):
+def draw_torso(cv, c, rise=0):
     """上衣：按 style 画毛衣 / 连帽衫 / 夹克 / 衬衫。"""
-    t = 22
+    t = 22 - rise                                            # 肩线上移、腰线不动 → 胸腔变高
     wide = c.get('wide', False)
     x0, x1 = (10, 21) if wide else (11, 20)
     b = 31 if c['bottom_style'] == 'pants' else 30
@@ -180,9 +180,6 @@ def draw_torso(cv, c):
             cv.rect(14, t + 4, 20, t + 4, shirt_d)
             cv.put(12, t + 3, c['skin'])                    # 左手
             cv.put(20, t + 4, c['skin_d'])                  # 右手
-
-    draw_arms(cv, c)
-
 
 def draw_lower(cv, c):
     if c['bottom_style'] == 'skirt':
@@ -274,11 +271,12 @@ NPC = [
 ]
 
 
-def render(c):
+def render(c, rise=0):
     cv = Canvas()
     draw_lower(cv, c)
-    draw_torso(cv, c)
-    draw_head(cv, c)
+    draw_torso(cv, c, rise)
+    draw_arms(cv, c, rise)
+    draw_head(cv, c, rise)
     cv.outline(OUTLINE)
     return cv.image()
 
@@ -287,7 +285,9 @@ def main():
     os.makedirs(OUT_DIR, exist_ok=True)
     for c in NPC:
         render(c).save(os.path.join(OUT_DIR, 'npc_%s.png' % c['key']))
-    print('已写 %d 个 NPC 像素小人（32x%d）→ %s' % (len(NPC), H, OUT_DIR))
+        render(c, rise=1).save(os.path.join(OUT_DIR, 'npc_%s_breath.png' % c['key']))
+    print('已写 %d 个 NPC（站姿+吸气帧，共 %d 张，32x%d）→ %s'
+          % (len(NPC), len(NPC) * 2, H, OUT_DIR))
 
     scale = 6
     sheet = Image.new('RGBA', (W * 3 * scale + 40, H * 2 * scale + 30), (58, 42, 31, 255))
@@ -297,6 +297,17 @@ def main():
         sheet.alpha_composite(im, (10 + (i % 3) * W * scale, 10 + (i // 3) * H * scale))
     sheet.save(os.path.join(ROOT, 'Tools', '_npcsprites_preview.png'))
     print('样张 → Tools/_npcsprites_preview.png')
+
+    # 呼吸两帧并排，方便看胸腔起伏
+    breath = Image.new('RGBA', (W * 4 * scale + 50, H * 3 * scale + 40), (58, 42, 31, 255))
+    for i, c in enumerate(NPC):
+        col, row = i % 2, i // 2
+        for k in range(2):
+            name = 'npc_%s%s.png' % (c['key'], '' if k == 0 else '_breath')
+            im = Image.open(os.path.join(OUT_DIR, name)).resize((W * scale, H * scale), Image.NEAREST)
+            breath.alpha_composite(im, (10 + (col * 2 + k) * W * scale, 10 + row * H * scale))
+    breath.save(os.path.join(ROOT, 'Tools', '_npcbreath_preview.png'))
+    print('呼吸样张 → Tools/_npcbreath_preview.png')
 
 
 if __name__ == '__main__':
