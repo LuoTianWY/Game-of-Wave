@@ -56,6 +56,19 @@ namespace WaveTeam.Room
                 { "神秘嘉宾", "guest" },
             };
 
+        /// <summary>
+        /// 个别角色的身高覆盖（世界单位）。没列出来的角色跟主角一样高。
+        /// 1.85 是比主角高半头，1.95 再高一截，用来区分体型。
+        /// </summary>
+        private static readonly Dictionary<string, float> HeightOverrides =
+            new Dictionary<string, float>
+            {
+                { "小川",     1.85f },
+                { "老周",     1.85f },
+                { "石头",     1.85f },
+                { "神秘嘉宾", 1.95f },
+            };
+
         public NpcProfile Profile { get; private set; }
 
         /// <summary>互动判定用的锚点：角色脚底（也就是 transform.position）。</summary>
@@ -75,7 +88,7 @@ namespace WaveTeam.Room
         {
             Profile = profile;
             _bodyColor = TraitColor.Of(profile.Trait);
-            _height = ResolveHeight();
+            _height = ResolveHeight(profile.Name);
 
             int order = SortingOrderFor(transform.position.y);
 
@@ -128,11 +141,15 @@ namespace WaveTeam.Room
         }
 
         /// <summary>
-        /// 取主角当前的身高，让 NPC 和主角一样高。主角还没生成时退回默认值，
-        /// 之后主角在 Inspector 里改了身高，NPC 也会跟着变。
+        /// 角色身高：先在 HeightOverrides 里找有没有单独指定（小川/老周/石头 1.85、
+        /// 神秘嘉宾 1.95），没有的话就跟主角一样高。主角还没生成时退回默认值。
         /// </summary>
-        private static float ResolveHeight()
+        private static float ResolveHeight(string profileName)
         {
+            float fixedHeight;
+            if (profileName != null && HeightOverrides.TryGetValue(profileName, out fixedHeight))
+                return fixedHeight;
+
             var player = GameObject.Find("Player");
             if (player != null)
             {
