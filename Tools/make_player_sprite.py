@@ -252,7 +252,7 @@ def render(facing, phase, rise=0):
     cv = Canvas()
     draw_legs(cv, facing, phase, bob)
     draw_skirt(cv, facing, bob)
-    # 呼吸只让头和脖子轻轻抬一格，肩膀、手臂、躯干都不动 —— 比整块上身起伏轻
+    # 呼吸只让头和脖子轻轻抬一格，肩膀、手臂、躯干都不动
     draw_torso(cv, facing, bob)
     draw_arms(cv, facing, phase, bob)
     draw_head(cv, facing, bob, rise)

@@ -30,7 +30,7 @@ namespace WaveTeam.Room
         private static readonly Dictionary<string, Vector3> SpawnOffsets =
             new Dictionary<string, Vector3>
             {
-                { "小川", new Vector3(0f, 0.45f, 0f) },   // 往上挪半格不到
+                { "小川", new Vector3(0f, 0.90f, 0f) },   // 往上挪接近一格
             };
 
         /// <summary>

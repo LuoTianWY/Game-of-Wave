@@ -119,22 +119,22 @@ def draw_head(cv, c, rise=0):
     cv.rect(15, chin + 1, 16, CHIN + 1, skin_d)             # 脖子（底端固定，吸气时变长）
 
 
-def draw_arms(cv, c, rise=0):
+def draw_arms(cv, c):
     """手臂统一画到 33 行（大腿根），比原来多两格，上身看起来才不短。"""
     shirt = c['top']
     shirt_d = c['top_d']
     skin = c['skin']
     left = c.get('wide', False) and 7 or 8
     right = c.get('wide', False) and 24 or 23
-    cv.rect(left, 23 - rise, left + 1, 32, shirt_d)
-    cv.rect(right - 1, 23 - rise, right, 32, shirt_d)
+    cv.rect(left, 23, left + 1, 32, shirt_d)
+    cv.rect(right - 1, 23, right, 32, shirt_d)
     cv.rect(left, 33, left + 1, 33, skin)
     cv.rect(right - 1, 33, right, 33, skin)
 
 
-def draw_torso(cv, c, rise=0):
+def draw_torso(cv, c):
     """上衣：按 style 画毛衣 / 连帽衫 / 夹克 / 衬衫。"""
-    t = 22 - rise                                            # 肩线上移、腰线不动 → 胸腔变高
+    t = 22
     wide = c.get('wide', False)
     x0, x1 = (10, 21) if wide else (11, 20)
     b = 31 if c['bottom_style'] == 'pants' else 30
@@ -274,7 +274,7 @@ NPC = [
 def render(c, rise=0):
     cv = Canvas()
     draw_lower(cv, c)
-    # 和主角一致：呼吸只有头和脖子抬一格，肩膀和躯干保持不动
+    # 和主角一致：呼吸只让头和脖子轻轻抬一格，肩膀和躯干保持不动
     draw_torso(cv, c)
     draw_arms(cv, c)
     draw_head(cv, c, rise)
