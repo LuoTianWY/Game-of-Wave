@@ -34,7 +34,7 @@ namespace WaveTeam.Room
         private const float NamePixelScale = 0.020f;          // 一个字体像素 = 0.02 世界单位
         private const float PromptPixelScale = 0.016f;
 
-        /// <summary>站立呼吸：和主角同频（2 拍/秒 × 6 拍一轮 ≈ 3 秒）。</summary>
+        /// <summary>站立呼吸：和主角同频（5 拍/秒 × 6 拍一轮 ≈ 1.2 秒）。</summary>
         private const float BreathFps = PlayerAnimator.DefaultIdleFps;
         private static readonly int[] BreathPattern = { 0, 0, 0, 1, 1, 1 };
 
