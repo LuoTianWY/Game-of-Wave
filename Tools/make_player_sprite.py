@@ -181,10 +181,10 @@ def draw_skirt(cv, facing, bob):
 def draw_arms(cv, facing, phase, bob, rise=0):
     """手臂在躯干外侧，中间留一列透明——描边填上后手臂才是一截独立肢体。"""
     t = TORSO_TOP + bob + 1 - rise
-    b = TORSO_BOT + bob + 1
+    b = TORSO_BOT + bob + 3                                 # 手垂到大腿根，上身才不显短
     swing = (-1, 0, 1, 0)[phase]                            # -1 前 / +1 后
-    cv.rect(8, t + max(0, swing), 9, b - 2 + min(0, swing), SHIRT_D)
-    cv.rect(22, t + max(0, -swing), 23, b - 2 + min(0, -swing), SHIRT_D)
+    cv.rect(8, t + max(0, swing), 9, b - 1 + min(0, swing), SHIRT_D)
+    cv.rect(22, t + max(0, -swing), 23, b - 1 + min(0, -swing), SHIRT_D)
     cv.rect(8, b + min(0, swing), 9, b + min(0, swing), SKIN)
     cv.rect(22, b + min(0, -swing), 23, b + min(0, -swing), SKIN)
 

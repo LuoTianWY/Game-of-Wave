@@ -119,16 +119,17 @@ def draw_head(cv, c):
     cv.rect(15, chin + 1, 16, chin + 1, skin_d)             # 脖子
 
 
-def draw_arms(cv, c, top, bottom):
+def draw_arms(cv, c):
+    """手臂统一画到 33 行（大腿根），比原来多两格，上身看起来才不短。"""
     shirt = c['top']
     shirt_d = c['top_d']
     skin = c['skin']
     left = c.get('wide', False) and 7 or 8
     right = c.get('wide', False) and 24 or 23
-    cv.rect(left, top + 1, left + 1, bottom - 2, shirt_d)
-    cv.rect(right - 1, top + 1, right, bottom - 2, shirt_d)
-    cv.rect(left, bottom - 1, left + 1, bottom - 1, skin)
-    cv.rect(right - 1, bottom - 1, right, bottom - 1, skin)
+    cv.rect(left, 23, left + 1, 32, shirt_d)
+    cv.rect(right - 1, 23, right, 32, shirt_d)
+    cv.rect(left, 33, left + 1, 33, skin)
+    cv.rect(right - 1, 33, right, 33, skin)
 
 
 def draw_torso(cv, c):
@@ -180,7 +181,7 @@ def draw_torso(cv, c):
             cv.put(12, t + 3, c['skin'])                    # 左手
             cv.put(20, t + 4, c['skin_d'])                  # 右手
 
-    draw_arms(cv, c, t, b)
+    draw_arms(cv, c)
 
 
 def draw_lower(cv, c):
