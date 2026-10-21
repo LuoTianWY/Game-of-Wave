@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using WaveTeam.Core;
@@ -6,8 +7,9 @@ using WaveTeam.UI;
 namespace WaveTeam.Room
 {
     /// <summary>
-    /// 排练室里的一个角色。美术资源到位之前，用「身 + 头」两个方块当占位素材，
-    /// 颜色取自性格（和音轨板里 TraitColor 是同一套，玩家能凭颜色认出性格）。
+    /// 排练室里的一个角色。优先用 Resources/Characters/Npc/npc_&lt;key&gt; 下的像素小人
+    /// （造型按各自立绘来，但不带立绘的音波背景）；找不到素材时退回「身 + 头」两个方块，
+    /// 颜色取自性格，保证美术缺失时房间仍然是完整的。
     ///
     /// 头顶挂一块**世界空间 Canvas**，里面两个像素文字：名字常显，互动提示默认隐藏。
     /// 用世界空间 Canvas 而不是 TextMesh，是为了和 GameBootstrap 那套 uGUI 共用同一个
@@ -22,10 +24,19 @@ namespace WaveTeam.Room
         private const float BodyW = 0.62f;
         private const float BodyH = 1.10f;
         private const float HeadSize = 0.44f;
-        private const float TotalHeight = BodyH + HeadSize;   // 1.54
+        private const float TotalHeight = BodyH + HeadSize;   // 1.54（方块兜底用）
+
+        /// <summary>
+        /// 像素小人统一按主角的身高来。找不到主角组件时用主角的默认身高 1.75。
+        /// </summary>
+        private const float FallbackHeight = 1.75f;
 
         private const float NamePixelScale = 0.020f;          // 一个字体像素 = 0.02 世界单位
         private const float PromptPixelScale = 0.016f;
+
+        /// <summary>站立呼吸：和主角同频（5 拍/秒 × 6 拍一轮 ≈ 1.2 秒）。</summary>
+        private const float BreathFps = PlayerAnimator.DefaultIdleFps;
+        private static readonly int[] BreathPattern = { 0, 0, 0, 1, 1, 1 };
 
         private static Sprite _blockSprite;
 
@@ -34,6 +45,36 @@ namespace WaveTeam.Room
         private PixelText _nameText;
         private PixelText _promptText;
         private Color _bodyColor;
+        private bool _usingSprite;
+        private float _height = FallbackHeight;
+        private readonly Sprite[] _breathFrames = new Sprite[2];
+        private int _breathStep;
+        private float _breathTimer;
+
+        /// <summary>角色名 → Resources/Characters/Npc 下的贴图名。</summary>
+        private static readonly Dictionary<string, string> SpriteKeys =
+            new Dictionary<string, string>
+            {
+                { "阿宁",     "aning" },
+                { "小川",     "xiaochuan" },
+                { "老周",     "laozhou" },
+                { "石头",     "shitou" },
+                { "小雨",     "xiaoyu" },
+                { "神秘嘉宾", "guest" },
+            };
+
+        /// <summary>
+        /// 个别角色的身高覆盖（世界单位）。没列出来的角色跟主角一样高。
+        /// 1.85 是比主角高半头，1.95 再高一截，用来区分体型。
+        /// </summary>
+        private static readonly Dictionary<string, float> HeightOverrides =
+            new Dictionary<string, float>
+            {
+                { "小川",     1.85f },
+                { "老周",     1.85f },
+                { "石头",     1.85f },
+                { "神秘嘉宾", 1.95f },
+            };
 
         public NpcProfile Profile { get; private set; }
 
@@ -54,16 +95,96 @@ namespace WaveTeam.Room
         {
             Profile = profile;
             _bodyColor = TraitColor.Of(profile.Trait);
+            _height = ResolveHeight(profile.Name);
 
             int order = SortingOrderFor(transform.position.y);
 
-            _body = MakeBlock("Body", new Vector2(BodyW, BodyH),
-                              new Vector3(0f, BodyH * 0.5f, 0f), _bodyColor, order);
-            _head = MakeBlock("Head", new Vector2(HeadSize, HeadSize),
-                              new Vector3(0f, BodyH + HeadSize * 0.5f, 0f),
-                              Lighten(_bodyColor, 0.25f), order);
+            var sprite = LoadSprite(profile.Name);
+            if (sprite != null)
+            {
+                BuildSprite(sprite, LoadSprite(profile.Name, "_breath"), order);
+            }
+            else
+            {
+                _body = MakeBlock("Body", new Vector2(BodyW, BodyH),
+                                  new Vector3(0f, BodyH * 0.5f, 0f), _bodyColor, order);
+                _head = MakeBlock("Head", new Vector2(HeadSize, HeadSize),
+                                  new Vector3(0f, BodyH + HeadSize * 0.5f, 0f),
+                                  Lighten(_bodyColor, 0.25f), order);
+            }
 
             BuildNameplate(order);
+        }
+
+        /// <summary>
+        /// 用像素小人立起来。贴图是 32×52、轴心在脚底的素材，
+        /// 这里统一缩到和原先占位块一样高（1.54），名牌位置就不用动。
+        /// </summary>
+        private void BuildSprite(Sprite sprite, Sprite breathSprite, int order)
+        {
+            var go = new GameObject("Visual");
+            go.transform.SetParent(transform, false);
+            go.transform.localPosition = Vector3.zero;
+
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = sprite;
+            sr.color = Color.white;
+            sr.sortingOrder = order;
+
+            float artHeight = sprite.bounds.size.y;
+            float scale = artHeight > 0.001f ? _height / artHeight : 1f;
+            go.transform.localScale = new Vector3(scale, scale, 1f);
+
+            _body = sr;
+            _bodyColor = Color.white;
+            _usingSprite = true;
+            _breathFrames[0] = sprite;
+            _breathFrames[1] = breathSprite;
+        }
+
+        private static Sprite LoadSprite(string profileName, string suffix = "")
+        {
+            string key;
+            if (profileName == null || !SpriteKeys.TryGetValue(profileName, out key)) return null;
+            return Resources.Load<Sprite>("Characters/Npc/npc_" + key + suffix);
+        }
+
+        /// <summary>
+        /// 站立呼吸：两帧（呼气 / 吸气胸腔抬 1px），节奏表和主角完全一致。
+        /// 所有 NPC 同时生成，所以它们的呼吸是齐的。
+        /// </summary>
+        private void Update()
+        {
+            if (_body == null || _breathFrames[1] == null) return;
+
+            _breathTimer += Time.deltaTime;
+            float step = 1f / Mathf.Max(0.1f, BreathFps);
+            while (_breathTimer >= step)
+            {
+                _breathTimer -= step;
+                _breathStep = (_breathStep + 1) % BreathPattern.Length;
+            }
+
+            _body.sprite = BreathPattern[_breathStep] == 0 ? _breathFrames[0] : _breathFrames[1];
+        }
+
+        /// <summary>
+        /// 角色身高：先在 HeightOverrides 里找有没有单独指定（小川/老周/石头 1.85、
+        /// 神秘嘉宾 1.95），没有的话就跟主角一样高。主角还没生成时退回默认值。
+        /// </summary>
+        private static float ResolveHeight(string profileName)
+        {
+            float fixedHeight;
+            if (profileName != null && HeightOverrides.TryGetValue(profileName, out fixedHeight))
+                return fixedHeight;
+
+            var player = GameObject.Find("Player");
+            if (player != null)
+            {
+                var animator = player.GetComponent<PlayerAnimator>();
+                if (animator != null && animator.WorldHeight > 0.1f) return animator.WorldHeight;
+            }
+            return FallbackHeight;
         }
 
         private SpriteRenderer MakeBlock(string name, Vector2 size, Vector3 localPos,
@@ -104,9 +225,9 @@ namespace WaveTeam.Room
             rt.pivot = new Vector2(0.5f, 0f);
             rt.localScale = Vector3.one;
             rt.sizeDelta = new Vector2(3f, CanvasH);
-            rt.localPosition = new Vector3(0f, TotalHeight + 0.30f, 0f);   // 下沿 = 1.84
+            rt.localPosition = new Vector3(0f, _height + 0.30f, 0f);       // 名牌跟着身高走
 
-            // 名字贴顶边 → 实际占 2.30 ~ 2.64，比头顶(1.54)高出 0.76
+            // 名字贴顶边，始终比头顶高出 0.76
             var name = PixelText.Create("Name", rt, Profile.Name, NamePixelScale,
                                         Color.white, PixelText.Align.Center);
             var nrt = (RectTransform)name.transform;
@@ -134,7 +255,13 @@ namespace WaveTeam.Room
         /// <summary>被选为互动目标时整体提亮一点，让玩家知道 F 会作用在谁身上。</summary>
         public void SetHighlight(bool on)
         {
-            if (_body != null) _body.color = on ? Lighten(_bodyColor, 0.30f) : _bodyColor;
+            if (_body != null)
+            {
+                if (_usingSprite)
+                    _body.color = on ? new Color(1f, 0.92f, 0.72f, 1f) : Color.white;
+                else
+                    _body.color = on ? Lighten(_bodyColor, 0.30f) : _bodyColor;
+            }
             if (_nameText != null) _nameText.color = on ? new Color(1f, 0.94f, 0.72f) : Color.white;
         }
 
