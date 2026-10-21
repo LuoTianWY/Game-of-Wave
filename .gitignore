@@ -9,3 +9,7 @@
 *.csproj
 *.unityproj
 *.sln
+
+# Python 脚本的缓存（Tools/ 下有生成美术的脚本）
+__pycache__/
+*.pyc

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using WaveTeam.Core;
@@ -6,8 +7,9 @@ using WaveTeam.UI;
 namespace WaveTeam.Room
 {
     /// <summary>
-    /// 排练室里的一个角色。美术资源到位之前，用「身 + 头」两个方块当占位素材，
-    /// 颜色取自性格（和音轨板里 TraitColor 是同一套，玩家能凭颜色认出性格）。
+    /// 排练室里的一个角色。优先用 Resources/Characters/Npc/npc_&lt;key&gt; 下的像素小人
+    /// （造型按各自立绘来，但不带立绘的音波背景）；找不到素材时退回「身 + 头」两个方块，
+    /// 颜色取自性格，保证美术缺失时房间仍然是完整的。
     ///
     /// 头顶挂一块**世界空间 Canvas**，里面两个像素文字：名字常显，互动提示默认隐藏。
     /// 用世界空间 Canvas 而不是 TextMesh，是为了和 GameBootstrap 那套 uGUI 共用同一个
@@ -34,6 +36,19 @@ namespace WaveTeam.Room
         private PixelText _nameText;
         private PixelText _promptText;
         private Color _bodyColor;
+        private bool _usingSprite;
+
+        /// <summary>角色名 → Resources/Characters/Npc 下的贴图名。</summary>
+        private static readonly Dictionary<string, string> SpriteKeys =
+            new Dictionary<string, string>
+            {
+                { "阿宁",     "aning" },
+                { "小川",     "xiaochuan" },
+                { "老周",     "laozhou" },
+                { "石头",     "shitou" },
+                { "小雨",     "xiaoyu" },
+                { "神秘嘉宾", "guest" },
+            };
 
         public NpcProfile Profile { get; private set; }
 
@@ -57,13 +72,52 @@ namespace WaveTeam.Room
 
             int order = SortingOrderFor(transform.position.y);
 
-            _body = MakeBlock("Body", new Vector2(BodyW, BodyH),
-                              new Vector3(0f, BodyH * 0.5f, 0f), _bodyColor, order);
-            _head = MakeBlock("Head", new Vector2(HeadSize, HeadSize),
-                              new Vector3(0f, BodyH + HeadSize * 0.5f, 0f),
-                              Lighten(_bodyColor, 0.25f), order);
+            var sprite = LoadSprite(profile.Name);
+            if (sprite != null)
+            {
+                BuildSprite(sprite, order);
+            }
+            else
+            {
+                _body = MakeBlock("Body", new Vector2(BodyW, BodyH),
+                                  new Vector3(0f, BodyH * 0.5f, 0f), _bodyColor, order);
+                _head = MakeBlock("Head", new Vector2(HeadSize, HeadSize),
+                                  new Vector3(0f, BodyH + HeadSize * 0.5f, 0f),
+                                  Lighten(_bodyColor, 0.25f), order);
+            }
 
             BuildNameplate(order);
+        }
+
+        /// <summary>
+        /// 用像素小人立起来。贴图是 32×52、轴心在脚底的素材，
+        /// 这里统一缩到和原先占位块一样高（1.54），名牌位置就不用动。
+        /// </summary>
+        private void BuildSprite(Sprite sprite, int order)
+        {
+            var go = new GameObject("Visual");
+            go.transform.SetParent(transform, false);
+            go.transform.localPosition = Vector3.zero;
+
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = sprite;
+            sr.color = Color.white;
+            sr.sortingOrder = order;
+
+            float artHeight = sprite.bounds.size.y;
+            float scale = artHeight > 0.001f ? TotalHeight / artHeight : 1f;
+            go.transform.localScale = new Vector3(scale, scale, 1f);
+
+            _body = sr;
+            _bodyColor = Color.white;
+            _usingSprite = true;
+        }
+
+        private static Sprite LoadSprite(string profileName)
+        {
+            string key;
+            if (profileName == null || !SpriteKeys.TryGetValue(profileName, out key)) return null;
+            return Resources.Load<Sprite>("Characters/Npc/npc_" + key);
         }
 
         private SpriteRenderer MakeBlock(string name, Vector2 size, Vector3 localPos,
@@ -134,7 +188,13 @@ namespace WaveTeam.Room
         /// <summary>被选为互动目标时整体提亮一点，让玩家知道 F 会作用在谁身上。</summary>
         public void SetHighlight(bool on)
         {
-            if (_body != null) _body.color = on ? Lighten(_bodyColor, 0.30f) : _bodyColor;
+            if (_body != null)
+            {
+                if (_usingSprite)
+                    _body.color = on ? new Color(1f, 0.92f, 0.72f, 1f) : Color.white;
+                else
+                    _body.color = on ? Lighten(_bodyColor, 0.30f) : _bodyColor;
+            }
             if (_nameText != null) _nameText.color = on ? new Color(1f, 0.94f, 0.72f) : Color.white;
         }
 
