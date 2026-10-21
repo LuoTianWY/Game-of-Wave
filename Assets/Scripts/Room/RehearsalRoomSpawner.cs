@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using WaveTeam.Core;
 
@@ -21,6 +22,16 @@ namespace WaveTeam.Room
     public static class RehearsalRoomSpawner
     {
         private const float InteractRadius = 1.7f;
+
+        /// <summary>
+        /// 出生点微调（世界单位）。场景文件不进仓库（组内引擎版本不一致），
+        /// 所以需要让所有人都看到的位置微调写在代码里；没列出的角色按场景里的出生点站。
+        /// </summary>
+        private static readonly Dictionary<string, Vector3> SpawnOffsets =
+            new Dictionary<string, Vector3>
+            {
+                { "小川", new Vector3(0f, 0.45f, 0f) },   // 往上挪半格不到
+            };
 
         /// <summary>
         /// 根据场景里的 Spawn Point 生成 NPC。
@@ -65,11 +76,19 @@ namespace WaveTeam.Room
 
                 NpcActor.Create(
                     profile,
-                    spawnPoint.position,
+                    spawnPoint.position + OffsetFor(profile.Name),
                     root.transform);
             }
 
             return AttachToPlayer(root.transform);
+        }
+
+        private static Vector3 OffsetFor(string profileName)
+        {
+            Vector3 offset;
+            if (profileName != null && SpawnOffsets.TryGetValue(profileName, out offset))
+                return offset;
+            return Vector3.zero;
         }
 
         /// <summary>

@@ -274,8 +274,9 @@ NPC = [
 def render(c, rise=0):
     cv = Canvas()
     draw_lower(cv, c)
-    draw_torso(cv, c, rise)
-    draw_arms(cv, c, rise)
+    # 和主角一致：呼吸只有头和脖子抬一格，肩膀和躯干保持不动
+    draw_torso(cv, c)
+    draw_arms(cv, c)
     draw_head(cv, c, rise)
     cv.outline(OUTLINE)
     return cv.image()
