@@ -58,6 +58,9 @@ namespace WaveTeam.UI
         private readonly List<RectTransform> _beatLines = new List<RectTransform>();
         private readonly List<float> _beatLineBeats = new List<float>();
         private readonly List<RectTransform> _slots = new List<RectTransform>(); // 格槽（缩放时随格宽变化）
+        private readonly List<RectTransform> _sectionLabels = new List<RectTransform>();
+        private readonly List<float> _sectionCenters = new List<float>();
+        private readonly List<float> _sectionSpans = new List<float>();
         private Transform _drumRoot;
         private Canvas _canvas;
         private float _panLastX;
@@ -109,6 +112,29 @@ namespace WaveTeam.UI
 
         private void DrawTrack(Transform root)
         {
+            CreateSectionBackground(
+            root,
+            "OpeningArea",
+                0f,
+                4f,
+                new Color(1f, 1f, 1f, 0.025f)
+            );
+
+            CreateSectionBackground(
+                root,
+                "DevelopmentArea",
+                4f,
+                8f,
+                new Color(1f, 1f, 1f, 0.045f)
+            );
+
+            CreateSectionBackground(
+                root,
+                "ClimaxArea",
+                8f,
+                16f,
+                new Color(1f, 1f, 1f, 0.025f)
+            );
             // 水平轨线
             var lane = UIFactory.CreatePanel("LaneLine", root, new Color(1f, 1f, 1f, 0.08f));
             lane.raycastTarget = false;
@@ -146,6 +172,69 @@ namespace WaveTeam.UI
                 _beatLines.Add(rt);
                 _beatLineBeats.Add(b);
             }
+            // 音轨区域提示
+            CreateSectionLabel(root, "OpeningLabel", "开场", 0f, 4f);
+            CreateSectionLabel(root, "DevelopmentLabel", "发展", 4f, 8f);
+            CreateSectionLabel(root, "ClimaxLabel", "高潮", 8f, 16f);
+
+            // 时间方向提示
+            var timeHint = PixelText.Create(
+                "TimeHint",
+                root,
+                "音乐从左向右播放 →",
+                1.4f,
+                UIStyle.Text,
+                PixelText.Align.Center
+            );
+
+            timeHint.raycastTarget = false;
+
+            var timeRt = (RectTransform)timeHint.transform;
+            timeRt.anchorMin = timeRt.anchorMax = timeRt.pivot =
+                new Vector2(0.5f, 0.5f);
+
+            timeRt.anchoredPosition =
+                new Vector2(0f, TrackHeight * 0.5f + 75f);
+        }
+        private void CreateSectionLabel(
+    Transform root,
+    string name,
+    string text,
+    float startBeat,
+    float endBeat)
+        {
+            var label = PixelText.Create(
+                name,
+                root,
+                text,
+                1.7f,
+                UIStyle.Text,
+                PixelText.Align.Center
+            );
+
+            label.raycastTarget = false;
+
+            var rt = (RectTransform)label.transform;
+
+            rt.anchorMin = rt.anchorMax = rt.pivot =
+                new Vector2(0f, 0.5f);
+
+            float centerBeat = (startBeat + endBeat) * 0.5f;
+            float span = endBeat - startBeat;
+
+            rt.anchoredPosition = new Vector2(
+                _space.ToX(centerBeat),
+                TrackHeight * 0.5f + 30f
+            );
+
+            rt.sizeDelta = new Vector2(
+                _space.SpanToWidth(span),
+                label.PreferredSize.y
+            );
+
+            _sectionLabels.Add(rt);
+            _sectionCenters.Add(centerBeat);
+            _sectionSpans.Add(span);
         }
 
         /// <summary>
@@ -153,6 +242,39 @@ namespace WaveTeam.UI
         /// 压在底板（UI/baseplate 或 UIStyle.Stage）之上、格槽之下，
         /// 让面板看起来是张木工台而不是一块纯色布。
         /// </summary>
+
+        private void CreateSectionBackground(
+    Transform root,
+    string name,
+    float startBeat,
+    float endBeat,
+    Color color)
+        {
+            var panel = UIFactory.CreatePanel(name, root, color);
+            panel.raycastTarget = false;
+
+            var rt = panel.rectTransform;
+
+            rt.anchorMin = rt.anchorMax = rt.pivot =
+                new Vector2(0f, 0.5f);
+
+            float centerBeat = (startBeat + endBeat) * 0.5f;
+            float span = endBeat - startBeat;
+
+            rt.anchoredPosition = new Vector2(
+                _space.ToX(centerBeat),
+                0f
+            );
+
+            rt.sizeDelta = new Vector2(
+                _space.SpanToWidth(span),
+                TrackHeight + 20f
+            );
+
+            rt.SetAsFirstSibling();
+        }
+
+
         private void DrawPlanks()
         {
             var root = UIFactory.CreateRect("Planks", transform);
@@ -277,6 +399,20 @@ namespace WaveTeam.UI
                 var rt = _slots[i];
                 rt.anchoredPosition = new Vector2(_space.ToX(i) + SlotGap * 0.5f, rt.anchoredPosition.y);
                 rt.sizeDelta = new Vector2(_space.SpanToWidth(1f) - SlotGap, rt.sizeDelta.y);
+            }
+            for (int i = 0; i < _sectionLabels.Count; i++)
+            {
+                var rt = _sectionLabels[i];
+
+                rt.anchoredPosition = new Vector2(
+                    _space.ToX(_sectionCenters[i]),
+                    rt.anchoredPosition.y
+                );
+
+                rt.sizeDelta = new Vector2(
+                    _space.SpanToWidth(_sectionSpans[i]),
+                    rt.sizeDelta.y
+                );
             }
             foreach (var p in _placed)
             {

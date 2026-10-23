@@ -293,6 +293,8 @@ namespace WaveTeam.UI
             _board = DrumTrackBoard.Create(_boardRoot.transform);
             _sidebar = RosterSidebar.Create(_boardRoot.transform);
 
+            BuildRehearsalGoalPanel();
+
             var samples = DrumLibrary.Load();
             if (samples.Count == 0)
             {
@@ -327,6 +329,72 @@ namespace WaveTeam.UI
             scaler.referenceResolution = new Vector2(1920, 1080);
             scaler.matchWidthOrHeight = 0f;
             return canvas;
+        }
+
+        private void BuildRehearsalGoalPanel()
+        {
+            // 左上角：本轮排练目标
+            var panel = UIFactory.CreatePanel(
+                "RehearsalGoalPanel",
+                _boardRoot.transform,
+                new Color(0.10f, 0.10f, 0.10f, 0.82f)
+            );
+
+            var rt = panel.rectTransform;
+
+            rt.anchorMin = rt.anchorMax = rt.pivot =
+                new Vector2(0f, 1f);
+
+            rt.sizeDelta = new Vector2(380f, 165f);
+
+            rt.anchoredPosition =
+                new Vector2(20f, -150f);
+
+
+            // 标题
+            var title = UIFactory.CreateText(
+                "GoalTitle",
+                panel.transform,
+                "本轮排练目标",
+                24,
+                UIStyle.Text,
+                TextAnchor.MiddleLeft
+            );
+
+            title.raycastTarget = false;
+
+            var titleRt = (RectTransform)title.transform;
+
+            titleRt.anchorMin = titleRt.anchorMax = titleRt.pivot =
+                new Vector2(0f, 1f);
+
+            titleRt.sizeDelta = new Vector2(340f, 35f);
+
+            titleRt.anchoredPosition =
+                new Vector2(18f, -15f);
+
+
+            // 目标内容
+            var goals = UIFactory.CreateText(
+                "GoalContent",
+                panel.transform,
+                "开场：需要稳定\n发展：增加层次\n整体：避免过度拥挤",
+                20,
+                UIStyle.Text,
+                TextAnchor.UpperLeft
+            );
+
+            goals.raycastTarget = false;
+
+            var goalsRt = (RectTransform)goals.transform;
+
+            goalsRt.anchorMin = goalsRt.anchorMax = goalsRt.pivot =
+                new Vector2(0f, 1f);
+
+            goalsRt.sizeDelta = new Vector2(340f, 105f);
+
+            goalsRt.anchoredPosition =
+                new Vector2(18f, -55f);
         }
 
         private void BuildPlayback()
