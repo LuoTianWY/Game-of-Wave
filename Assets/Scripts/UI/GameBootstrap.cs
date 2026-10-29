@@ -26,6 +26,7 @@ namespace WaveTeam.UI
 
         private GameObject _roomRoot;   // 排练室入口 UI（「进入音轨板」按钮）
         private GameObject _boardRoot;  // 音轨板 UI 根（进入后所有元素，退出即销毁）
+        private GameObject _resultPanel;
 
         private NpcInteractor _npcInteractor;    // 挂在 Player 上；跨场景会随之销毁，用「==null」判断重建
         private CharacterPanel _characterPanel;  // 当前打开的角色信息面板，同一时刻只允许一个
@@ -426,21 +427,43 @@ namespace WaveTeam.UI
                 _perf = perfGo.AddComponent<PerformancePlayer>();
             }
             _perf.Setup(_board, _bgm);
+
+
             _perf.OnFinished = msg =>
             {
-                // 空音轨时保留原来的提示
                 if (_board == null || _board.Placed.Count == 0)
                 {
                     _statusText.Text = msg;
                     return;
                 }
 
-                // 演出结束后，只显示统一的排练评分
                 var result = RehearsalEvaluator.Evaluate(_board);
 
-                _statusText.Text =
-                    "排练评分：" + result.Score;
+                _statusText.Text = "排练评分：" + result.Score;
+
+                if (_resultPanel != null)
+                    Destroy(_resultPanel);
+
+                _resultPanel = RehearsalResultPanel.Show(
+                    _boardRoot.transform,
+                    result,
+
+                    // 重新编排
+                    () =>
+                    {
+                        _resultPanel = null;
+                        _statusText.Text = "调整波形后再次演出";
+                    },
+
+                    // 返回排练室
+                    () =>
+                    {
+                        _resultPanel = null;
+                        OnExitBoard();
+                    }
+                );
             };
+
 
             BuildBottomBar();
         }

@@ -1,4 +1,6 @@
-﻿using WaveTeam.UI;
+﻿
+using WaveTeam.Core;
+using WaveTeam.UI;
 
 namespace WaveTeam.Room
 {
@@ -6,9 +8,10 @@ namespace WaveTeam.Room
     {
         public int Score;
 
-        public bool AningOpeningGood;
-        public bool XiaochuanTimingGood;
-        public bool ShitouBalanceGood;
+        // 三个排练目标是否达成
+        public bool OpeningStableGood;
+        public bool DevelopmentLayeredGood;
+        public bool DensityGood;
     }
 
     public static class RehearsalEvaluator
@@ -17,77 +20,53 @@ namespace WaveTeam.Room
         {
             var result = new RehearsalScoreResult();
 
-            if (board == null)
+            if (board == null || board.Placed.Count == 0)
                 return result;
 
-            bool hasAning = false;
-            bool hasXiaochuan = false;
-
-            float firstAningBeat = float.MaxValue;
-            float firstXiaochuanBeat = float.MaxValue;
-
-            int shitouCount = 0;
+            int highDensityCount = 0;
 
             foreach (var drum in board.Placed)
             {
-                string name = drum.Character.Name;
+                // 从 RehearsalTraits 获取角色属性
+                var stats = RehearsalTraits.GetStats(
+                    drum.Character.Noun
+                );
 
-                // 阿宁：负责开场
-                if (name == "阿宁")
+                float startBeat = drum.StartBeat;
+
+                // 目标1：开场（0-3拍）需要稳定
+                if (startBeat >= 0f &&
+                    startBeat < 4f &&
+                    stats.Stability >= 3)
                 {
-                    hasAning = true;
-
-                    if (drum.StartBeat < firstAningBeat)
-                        firstAningBeat = drum.StartBeat;
+                    result.OpeningStableGood = true;
                 }
 
-                // 小川：不要太早进入
-                else if (name == "小川")
+                // 目标2：发展（4-7拍）需要层次
+                if (startBeat >= 4f &&
+                    startBeat < 8f &&
+                    stats.Layering >= 3)
                 {
-                    hasXiaochuan = true;
-
-                    if (drum.StartBeat < firstXiaochuanBeat)
-                        firstXiaochuanBeat = drum.StartBeat;
+                    result.DevelopmentLayeredGood = true;
                 }
 
-                // 石头：不要放太多
-                else if (name == "石头")
+                // 目标3：高密度波形不宜太多
+                if (stats.Density >= 3)
                 {
-                    shitouCount++;
+                    highDensityCount++;
                 }
             }
 
-            // 阿宁必须在前 4 拍进入
-            result.AningOpeningGood =
-                hasAning && firstAningBeat < 4f;
+            // 至少安排两段，高密度波形最多一段
+            result.DensityGood =
+                board.Placed.Count >= 2 &&
+                highDensityCount <= 1;
 
-            // 小川从第 4 拍或更晚进入
-            result.XiaochuanTimingGood =
-                hasXiaochuan && firstXiaochuanBeat >= 4f;
-
-            // 石头至少出现一次，但最多两次
-            result.ShitouBalanceGood =
-                shitouCount >= 1 && shitouCount <= 2;
-
-            int passed = 0;
-
-            if (result.AningOpeningGood)
-                passed++;
-
-            if (result.XiaochuanTimingGood)
-                passed++;
-
-            if (result.ShitouBalanceGood)
-                passed++;
-
-            if (passed == 3)
-                result.Score = 100;
-            else if (passed == 2)
-                result.Score = 67;
-            else if (passed == 1)
-                result.Score = 33;
-            else
-                result.Score = 0;
+            // 统一排练评分
+            result.Score =
+                (result.OpeningStableGood ? 33 : 0) +
+                (result.DevelopmentLayeredGood ? 33 : 0) +
+                (result.DensityGood ? 34 : 0);
 
             return result;
         }

@@ -74,10 +74,17 @@ namespace WaveTeam.UI
             label.raycastTarget = false;
 
             // 玩法属性提示：帮助玩家理解角色为什么适合某种编排
+            var stats = RehearsalTraits.GetStats(Character.Noun);
+
+            string hintText =
+                "稳定 " + stats.Stability +
+                "  层次 " + stats.Layering +
+                "  密度 " + stats.Density;
+
             var gameplayHint = UIFactory.PlacePixelText(
                 "GameplayHint",
                 transform,
-                GetGameplayHint(Character.Noun),
+                hintText,
                 1.1f,
                 UIStyle.Text,
                 PixelText.Align.Left,
@@ -92,27 +99,6 @@ namespace WaveTeam.UI
             _source = gameObject.AddComponent<AudioSource>();
             _source.spatialBlend = 0f;
             _source.playOnAwake = false;
-        }
-
-        private string GetGameplayHint(string noun)
-        {
-            switch (noun)
-            {
-                case "沉稳":
-                    return "稳定 3  层次 1  密度 1";
-
-                case "跳脱":
-                    return "稳定 1  层次 3  密度 2";
-
-                case "张扬":
-                    return "稳定 1  层次 2  密度 3";
-
-                case "干脆":
-                    return "稳定 2  层次 2  密度 2";
-
-                default:
-                    return "稳定 2  层次 2  密度 2";
-            }
         }
 
         private void AddPlayButton()
