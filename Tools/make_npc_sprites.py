@@ -26,8 +26,8 @@ EYE = (32, 21, 16, 255)
 EYE_HI = (248, 240, 228, 255)
 BLUSH = (222, 156, 134, 255)
 
-HEAD_TOP = 2
-CHIN = 27
+HEAD_TOP = 5
+CHIN = 30
 
 
 def dark(c, k=0.72):
@@ -114,8 +114,6 @@ def draw_head(cv, c, rise=0):
     cv.rect(12, top + 1, 19, top + 2, hair_l)               # 头顶受光
     cv.rect(11, top + 17, 13, top + 19, EYE)                # 左眼 3×3
     cv.rect(18, top + 17, 20, top + 19, EYE)                # 右眼 3×3
-    cv.put(11, top + 17, EYE_HI)
-    cv.put(18, top + 17, EYE_HI)
 
     if style == 'grey':
         cv.rect(11, top + 16, 13, top + 16, dark(hair, 0.8))  # 眉毛
@@ -136,18 +134,18 @@ def draw_arms(cv, c):
     skin = c['skin']
     left = c.get('wide', False) and 4 or 5
     right = c.get('wide', False) and 27 or 26
-    cv.rect(left, 29, left + 2, 36, shirt_d)
-    cv.rect(right - 2, 29, right, 36, shirt_d)
-    cv.rect(left, 37, left + 2, 37, skin)
-    cv.rect(right - 2, 37, right, 37, skin)
+    cv.rect(left, 32, left + 2, 40, shirt_d)
+    cv.rect(right - 2, 32, right, 40, shirt_d)
+    cv.rect(left, 41, left + 2, 41, skin)
+    cv.rect(right - 2, 41, right, 41, skin)
 
 
 def draw_torso(cv, c):
     """上衣：按 style 画毛衣 / 连帽衫 / 夹克 / 衬衫。"""
-    t = 28
+    t = 31
     wide = c.get('wide', False)
     x0, x1 = (8, 23) if wide else (9, 22)
-    b = 35 if c['bottom_style'] == 'pants' else 35
+    b = 40 if c['bottom_style'] == 'pants' else 38
 
     shirt, shirt_d = c['top'], c['top_d']
     style = c['top_style']
@@ -176,7 +174,7 @@ def draw_torso(cv, c):
             cv.rect(11, t, 20, t + 1, sc)                   # 围巾
             cv.rect(13, t + 2, 18, t + 2, dark(sc))
     elif style == 'coat':
-        coat_b = 35 if c.get('long_coat') else b
+        coat_b = b
         cv.rect(x0, t, x1, coat_b, shirt)
         cv.rect(14, t, 17, coat_b, c['inner'])              # 敞开的外套
         cv.rect(13, t, 13, coat_b, shirt_d)
@@ -199,7 +197,7 @@ def draw_lower(cv, c):
     pants, pants_d = c['bottom'], c['bottom_d']
     shoe, shoe_d = c['shoe'], c['shoe_d']
 
-    top = 36
+    top = 41 if c['bottom_style'] == 'pants' else 39
     cv.rect(11, top, 14, 45, pants)                         # 左裤腿
     cv.rect(17, top, 20, 45, pants_d)                       # 右裤腿
     cv.rect(11, top, 11, 45, light(pants, 0.14))            # 左裤受光边，两条腿才不糊成一坨
@@ -219,18 +217,18 @@ def draw_skirt(cv, c):
     skin, skin_d = c['skin'], c['skin_d']
     boot, boot_d = c['shoe'], c['shoe_d']
 
-    for i, y in enumerate(range(36, 42)):
+    for i, y in enumerate(range(39, 44)):
         inset = 1 if i < 2 else 0
         x0, x1 = 10 - inset, 21 + inset
         cv.rect(x0, y, x1, y, skirt)
         for x in range(x0, x1 + 1):
             if (x - x0) % 3 == 2:
                 cv.put(x, y, skirt_d)
-    cv.rect(10, 36, 21, 36, skirt_d)
-    cv.rect(9, 41, 22, 41, skirt_d)
+    cv.rect(10, 39, 21, 39, skirt_d)
+    cv.rect(9, 43, 22, 43, skirt_d)
 
-    cv.rect(11, 42, 14, 45, skin)                           # 左腿
-    cv.rect(17, 42, 20, 45, skin_d)                         # 右腿
+    cv.rect(11, 44, 14, 45, skin)                           # 左腿
+    cv.rect(17, 44, 20, 45, skin_d)                         # 右腿
     for x0, out in ((11, -1), (17, 1)):
         sx0 = x0 - 1 if out < 0 else x0
         sx1 = x0 + 3 if out < 0 else x0 + 4

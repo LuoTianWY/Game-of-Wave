@@ -49,14 +49,14 @@ EYE_HI = (248, 240, 228, 255)    # 眼里的高光点，大头娃娃的「活气
 BLUSH = (222, 156, 134, 255)     # #DE9C86
 
 # 宝可梦红/绿宝石那种「大头糖豆人」比例：头占身高一半，身子和腿都只有一小截。
-HEAD_TOP = 2
-CHIN = 27
-NECK = 28
-TORSO_TOP = 28
-TORSO_BOT = 35
-SKIRT_TOP = 36
-SKIRT_BOT = 40
-LEG_TOP = 41
+HEAD_TOP = 5
+CHIN = 30
+NECK = 31
+TORSO_TOP = 31
+TORSO_BOT = 38
+SKIRT_TOP = 39
+SKIRT_BOT = 43
+LEG_TOP = 44
 BOOT_TOP = 46
 FOOT_BOT = 50
 
@@ -120,7 +120,6 @@ def draw_head(cv, facing, bob, rise=0):
         cv.rect(11, top + 11, 15, top + 14, HAIR)           # 前面的鬓角
         cv.rect(8, top + 2, 20, top + 3, HAIR_M)            # 头顶高光
         cv.rect(19, top + 15, 21, top + 17, EYE)            # 一只大眼
-        cv.put(19, top + 15, EYE_HI)
         cv.put(19, chin - 3, BLUSH)                         # 腮红
         cv.put(20, chin - 2, SKIN_D)                        # 嘴
     else:
@@ -146,8 +145,6 @@ def draw_head(cv, facing, bob, rise=0):
             cv.rect(12, top + 1, 19, top + 3, HAIR_M)       # 头顶高光
             cv.rect(12, top + 17, 14, top + 19, EYE)        # 左眼 3×3
             cv.rect(18, top + 17, 20, top + 19, EYE)        # 右眼 3×3
-            cv.put(12, top + 17, EYE_HI)
-            cv.put(18, top + 17, EYE_HI)
             cv.rect(15, top + 22, 16, top + 22, SKIN_D)     # 嘴
             cv.put(10, top + 21, BLUSH)
             cv.put(21, top + 21, BLUSH)
