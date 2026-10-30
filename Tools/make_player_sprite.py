@@ -124,8 +124,12 @@ def draw_head(cv, facing, bob, rise=0):
         cv.put(20, chin - 2, SKIN_D)                        # 嘴
     else:
         if facing == 'down':
-            cv.ellipse(16, top + 13, 11, 8, HAIR)           # 头发外轮廓（压扁，别像爆炸头）
-            cv.put(16, top - 1, CLEAR)                      # 削掉椭圆顶上的单颗像素，不然像天线
+            # 头顶用四行阶梯收成圆弧：顶部是圆的，但整体比原来低
+            cv.rect(12, top + 5, 19, top + 5, HAIR)
+            cv.rect(10, top + 6, 21, top + 6, HAIR)
+            cv.rect(8, top + 7, 23, top + 7, HAIR)
+            cv.rect(6, top + 8, 25, top + 8, HAIR)
+            cv.rect(5, top + 9, 26, chin - 3, HAIR)
             # 两侧长发：上宽下窄，末端往外翘一格，不再是直筒
             cv.rect(4, top + 10, 8, chin - 3, HAIR)
             cv.rect(5, chin - 2, 8, chin + 1, HAIR)
@@ -138,7 +142,7 @@ def draw_head(cv, facing, bob, rise=0):
             cv.ellipse(16, top + 20, 7, 5, SKIN)            # 脸（下半截，上面全是头发）
             cv.rect(11, top + 24, 20, chin, SKIN)           # 下巴补方
             # 不对称刘海：一边长一点，边角收进去
-            cv.rect(8, top + 4, 23, top + 8, HAIR)
+            cv.rect(10, top + 7, 21, top + 8, HAIR)          # 刘海横条（别盖住头顶阶梯）
             cv.rect(9, top + 9, 16, top + 10, HAIR)
             cv.rect(12, top + 11, 18, top + 12, HAIR)
             cv.rect(20, top + 9, 22, top + 10, HAIR)
@@ -149,8 +153,11 @@ def draw_head(cv, facing, bob, rise=0):
             cv.put(10, top + 21, BLUSH)
             cv.put(21, top + 21, BLUSH)
         else:
-            cv.ellipse(16, top + 13, 11, 8, HAIR)           # 背面头发（同样压扁）
-            cv.put(16, top - 1, CLEAR)                      # 同样削掉顶上那一颗
+            cv.rect(12, top + 5, 19, top + 5, HAIR)
+            cv.rect(10, top + 6, 21, top + 6, HAIR)
+            cv.rect(8, top + 7, 23, top + 7, HAIR)
+            cv.rect(6, top + 8, 25, top + 8, HAIR)
+            cv.rect(5, top + 9, 26, chin, HAIR)
             cv.rect(4, top + 10, 27, chin, HAIR)            # 长发盖住脖子
             cv.rect(5, chin + 1, 26, chin + 2, HAIR)        # 发尾收窄
             cv.rect(12, top + 6, 19, top + 7, HAIR_M)       # 头顶受光

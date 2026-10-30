@@ -48,9 +48,12 @@ def draw_head(cv, c, rise=0):
 
     if style == 'hood':
         hood = c['hood']
-        cv.ellipse(16, top + 12, 11, 8, hood)               # 兜帽外轮廓（压扁）
+        cv.rect(12, top + 5, 19, top + 5, hood)             # 兜帽也是阶梯圆顶
+        cv.rect(10, top + 6, 21, top + 6, hood)
+        cv.rect(8, top + 7, 23, top + 7, hood)
+        cv.rect(6, top + 8, 25, top + 8, hood)
         cv.rect(6, top + 9, 25, chin + 3, hood)
-        cv.ellipse(16, top + 12, 7, 8, dark(hood, 0.55))    # 帽子里的阴影
+        cv.ellipse(16, top + 15, 7, 7, dark(hood, 0.55))    # 帽子里的阴影（别冒出兜帽顶）
         cv.ellipse(16, top + 18, 4, 3, skin)                # 只露下半张脸
         cv.rect(13, top + 18, 18, chin, skin)
         cv.rect(12, top + 8, 19, top + 11, hair)            # 额前的头发
@@ -61,8 +64,11 @@ def draw_head(cv, c, rise=0):
         return
 
     # 头发外轮廓（所有非兜帽共用）
-    cv.ellipse(16, top + 13, 11, 8, hair)
-    cv.put(16, top - 1, CLEAR)                              # 削掉顶上的单颗像素
+    cv.rect(12, top + 5, 19, top + 5, hair)                 # 阶梯圆顶：圆但不高
+    cv.rect(10, top + 6, 21, top + 6, hair)
+    cv.rect(8, top + 7, 23, top + 7, hair)
+    cv.rect(6, top + 8, 25, top + 8, hair)
+    cv.rect(5, top + 9, 26, chin - 3, hair)
 
     if style == 'long':
         cv.rect(4, top + 10, 8, chin - 3, hair)
@@ -89,7 +95,7 @@ def draw_head(cv, c, rise=0):
 
     # 刘海
     if style == 'spiky':
-        cv.rect(9, top + 4, 22, top + 6, hair)
+        cv.rect(9, top + 6, 22, top + 8, hair)
         for x, y in ((10, top + 1), (12, top), (15, top), (18, top), (21, top + 1)):
             cv.rect(x, y, x, top + 3, hair)
         cv.rect(8, top + 2, 9, top + 4, hair)
@@ -98,18 +104,18 @@ def draw_head(cv, c, rise=0):
         cv.rect(20, top + 7, 22, top + 9, hair)
     elif style == 'grey':
         # 发际线偏高、两侧留短鬓角：像个上了年纪的人
-        cv.rect(9, top + 4, 22, top + 5, hair)
-        cv.rect(9, top + 6, 10, top + 8, hair)
-        cv.rect(21, top + 6, 22, top + 8, hair)
-        cv.rect(15, top + 6, 16, top + 7, hair)             # 中间一小撮
+        cv.rect(9, top + 7, 22, top + 8, hair)
+        cv.rect(9, top + 9, 10, top + 11, hair)
+        cv.rect(21, top + 9, 22, top + 11, hair)
+        cv.rect(15, top + 9, 16, top + 10, hair)            # 中间一小撮
     elif style == 'short':
-        cv.rect(9, top + 4, 22, top + 6, hair)
-        cv.rect(9, top + 7, 11, top + 9, hair)
-        cv.rect(15, top + 7, 22, top + 8, hair)             # 侧分的一缕
+        cv.rect(9, top + 7, 22, top + 8, hair)
+        cv.rect(9, top + 9, 11, top + 11, hair)
+        cv.rect(15, top + 9, 22, top + 10, hair)            # 侧分的一缕
     else:                                                   # bob / long
-        cv.rect(9, top + 4, 22, top + 6, hair)
-        cv.rect(9, top + 7, 11, top + 8, hair)
-        cv.rect(20, top + 7, 22, top + 8, hair)
+        cv.rect(10, top + 7, 21, top + 8, hair)
+        cv.rect(9, top + 9, 11, top + 10, hair)
+        cv.rect(20, top + 9, 22, top + 10, hair)
 
     cv.rect(12, top + 6, 19, top + 7, hair_l)               # 头顶受光
     cv.rect(11, top + 17, 13, top + 19, EYE)                # 左眼 3×3
