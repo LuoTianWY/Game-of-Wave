@@ -26,8 +26,8 @@ EYE = (32, 21, 16, 255)
 EYE_HI = (248, 240, 228, 255)
 BLUSH = (222, 156, 134, 255)
 
-HEAD_TOP = 5
-CHIN = 30
+HEAD_TOP = 8
+CHIN = 33
 
 
 def dark(c, k=0.72):
@@ -140,18 +140,18 @@ def draw_arms(cv, c):
     skin = c['skin']
     left = c.get('wide', False) and 4 or 5
     right = c.get('wide', False) and 27 or 26
-    cv.rect(left, 32, left + 2, 40, shirt_d)
-    cv.rect(right - 2, 32, right, 40, shirt_d)
-    cv.rect(left, 41, left + 2, 41, skin)
-    cv.rect(right - 2, 41, right, 41, skin)
+    cv.rect(left, 35, left + 2, 39, shirt_d)
+    cv.rect(right - 2, 35, right, 39, shirt_d)
+    cv.rect(left, 40, left + 2, 40, skin)
+    cv.rect(right - 2, 40, right, 40, skin)
 
 
 def draw_torso(cv, c):
     """上衣：按 style 画毛衣 / 连帽衫 / 夹克 / 衬衫。"""
-    t = 31
+    t = 34
     wide = c.get('wide', False)
     x0, x1 = (8, 23) if wide else (9, 22)
-    b = 40 if c['bottom_style'] == 'pants' else 38
+    b = 38
 
     shirt, shirt_d = c['top'], c['top_d']
     style = c['top_style']
@@ -203,19 +203,19 @@ def draw_lower(cv, c):
     pants, pants_d = c['bottom'], c['bottom_d']
     shoe, shoe_d = c['shoe'], c['shoe_d']
 
-    top = 41 if c['bottom_style'] == 'pants' else 39
-    cv.rect(11, top, 14, 45, pants)                         # 左裤腿
-    cv.rect(17, top, 20, 45, pants_d)                       # 右裤腿
-    cv.rect(11, top, 11, 45, light(pants, 0.14))            # 左裤受光边，两条腿才不糊成一坨
-    cv.rect(17, top, 17, 45, light(pants_d, 0.12))
+    top = 39
+    cv.rect(11, top, 14, 44, pants)                         # 左裤腿
+    cv.rect(17, top, 20, 44, pants_d)                       # 右裤腿
+    cv.rect(11, top, 11, 44, light(pants, 0.14))            # 左裤受光边，两条腿才不糊成一坨
+    cv.rect(17, top, 17, 44, light(pants_d, 0.12))
 
     for x0, col, out in ((11, shoe, -1), (17, shoe, 1)):
         sx0 = x0 - 1 if out < 0 else x0                     # 鞋比腿宽一格
         sx1 = x0 + 3 if out < 0 else x0 + 4
-        cv.rect(sx0, 46, sx1, 49, col)                      # 鞋面
+        cv.rect(sx0, 45, sx1, 49, col)                      # 鞋面
         cv.rect(sx0, 50, sx1, 50, shoe_d)                   # 平鞋底
         if c['shoe_style'] == 'sneaker':
-            cv.rect(x0, 47, x0 + 1, 47, light(col, 0.35))   # 鞋带高光
+            cv.rect(x0, 46, x0 + 1, 46, light(col, 0.35))   # 鞋带高光
 
 
 def draw_skirt(cv, c):
@@ -223,7 +223,7 @@ def draw_skirt(cv, c):
     skin, skin_d = c['skin'], c['skin_d']
     boot, boot_d = c['shoe'], c['shoe_d']
 
-    for i, y in enumerate(range(39, 44)):
+    for i, y in enumerate(range(39, 43)):
         inset = 1 if i < 2 else 0
         x0, x1 = 10 - inset, 21 + inset
         cv.rect(x0, y, x1, y, skirt)
@@ -231,15 +231,15 @@ def draw_skirt(cv, c):
             if (x - x0) % 3 == 2:
                 cv.put(x, y, skirt_d)
     cv.rect(10, 39, 21, 39, skirt_d)
-    cv.rect(9, 43, 22, 43, skirt_d)
+    cv.rect(9, 42, 22, 42, skirt_d)
 
-    cv.rect(11, 44, 14, 45, skin)                           # 左腿
-    cv.rect(17, 44, 20, 45, skin_d)                         # 右腿
+    cv.rect(11, 43, 14, 43, skin)                           # 左腿（只露一行）
+    cv.rect(17, 43, 20, 43, skin_d)                         # 右腿
     for x0, out in ((11, -1), (17, 1)):
         sx0 = x0 - 1 if out < 0 else x0
         sx1 = x0 + 3 if out < 0 else x0 + 4
-        cv.rect(sx0, 46, sx1, 49, boot)                     # 靴筒
-        cv.rect(sx0, 46, sx1, 46, dark(boot, 0.8))
+        cv.rect(sx0, 44, sx1, 49, boot)                     # 靴筒
+        cv.rect(sx0, 44, sx1, 44, dark(boot, 0.8))
         cv.rect(sx0, 50, sx1, 50, boot_d)                   # 平鞋底
 
 
