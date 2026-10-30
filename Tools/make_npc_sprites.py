@@ -26,8 +26,8 @@ EYE = (32, 21, 16, 255)
 EYE_HI = (248, 240, 228, 255)
 BLUSH = (222, 156, 134, 255)
 
-HEAD_TOP = 4
-CHIN = 23
+HEAD_TOP = 3
+CHIN = 25
 
 
 def dark(c, k=0.72):
@@ -48,34 +48,44 @@ def draw_head(cv, c, rise=0):
 
     if style == 'hood':
         hood = c['hood']
-        cv.ellipse(16, top + 8, 9, 8, hood)                 # 兜帽外轮廓
-        cv.rect(7, top + 7, 24, chin + 3, hood)
-        cv.ellipse(16, top + 11, 6, 7, dark(hood, 0.55))    # 帽子里的阴影
-        cv.ellipse(16, top + 17, 4, 3, skin)                # 只露下半张脸
-        cv.rect(13, top + 17, 18, chin, skin)
-        cv.rect(12, top + 7, 19, top + 10, hair)            # 额前的头发
-        cv.put(13, top + 14, EYE_HI)                        # 阴影里亮着的眼睛
-        cv.put(19, top + 14, EYE_HI)
+        cv.ellipse(16, top + 9, 10, 9, hood)                # 兜帽外轮廓
+        cv.rect(6, top + 7, 25, chin + 3, hood)
+        cv.ellipse(16, top + 12, 7, 8, dark(hood, 0.55))    # 帽子里的阴影
+        cv.ellipse(16, top + 18, 4, 3, skin)                # 只露下半张脸
+        cv.rect(13, top + 18, 18, chin, skin)
+        cv.rect(12, top + 8, 19, top + 11, hair)            # 额前的头发
+        cv.put(13, top + 15, EYE_HI)                        # 阴影里亮着的眼睛
+        cv.put(19, top + 15, EYE_HI)
         cv.rect(15, chin - 1, 16, chin - 1, skin_d)         # 嘴
-        cv.rect(12, chin + 1, 19, chin + 2, dark(hood, 0.45))  # 立起来的领子
+        cv.rect(12, chin + 1, 19, chin + 3, dark(hood, 0.45))  # 立起来的领子
         return
 
     # 头发外轮廓（所有非兜帽共用）
-    cv.ellipse(16, top + 8, 9, 8, hair)
+    cv.ellipse(16, top + 9, 10, 9, hair)
     cv.put(16, top - 1, CLEAR)                              # 削掉顶上的单颗像素
 
     if style == 'long':
-        cv.rect(7, top + 6, 9, chin + 3, hair)
-        cv.rect(22, top + 6, 24, chin + 3, hair)
+        cv.rect(6, top + 6, 9, chin - 2, hair)
+        cv.rect(7, chin - 1, 9, chin + 2, hair)
+        cv.put(6, chin + 2, hair)
+        cv.rect(22, top + 6, 25, chin - 2, hair)
+        cv.rect(22, chin - 1, 24, chin + 2, hair)
+        cv.put(25, chin + 2, hair)
+        cv.rect(8, top + 9, 9, chin - 3, hair_l)
+        cv.rect(22, top + 9, 23, chin - 3, hair_l)
     elif style == 'bob':
-        cv.rect(7, top + 6, 9, chin + 1, hair)
-        cv.rect(22, top + 6, 24, chin + 1, hair)
+        cv.rect(6, top + 6, 9, chin - 1, hair)
+        cv.rect(7, chin, 9, chin + 1, hair)
+        cv.rect(22, top + 6, 25, chin - 1, hair)
+        cv.rect(22, chin, 24, chin + 1, hair)
     else:                                                   # short / spiky / grey
         cv.rect(8, top + 6, 9, top + 14, hair)
         cv.rect(22, top + 6, 23, top + 14, hair)
+        cv.put(10, top + 15, hair)
+        cv.put(21, top + 15, hair)
 
-    cv.ellipse(16, top + 14, 6, 5, skin)
-    cv.rect(12, top + 17, 19, chin, skin)
+    cv.ellipse(16, top + 16, 6, 6, skin)
+    cv.rect(12, top + 19, 19, chin, skin)
 
     # 刘海
     if style == 'spiky':
@@ -102,19 +112,19 @@ def draw_head(cv, c, rise=0):
         cv.rect(20, top + 7, 22, top + 8, hair)
 
     cv.rect(12, top + 1, 19, top + 2, hair_l)               # 头顶受光
-    cv.rect(12, top + 11, 13, top + 13, EYE)                # 左眼 2×3
-    cv.rect(18, top + 11, 19, top + 13, EYE)                # 右眼 2×3
-    cv.put(12, top + 11, EYE_HI)
-    cv.put(18, top + 11, EYE_HI)
+    cv.rect(11, top + 12, 13, top + 14, EYE)                # 左眼 3×3
+    cv.rect(18, top + 12, 20, top + 14, EYE)                # 右眼 3×3
+    cv.put(11, top + 12, EYE_HI)
+    cv.put(18, top + 12, EYE_HI)
 
     if style == 'grey':
-        cv.rect(12, top + 10, 13, top + 10, dark(hair, 0.8))  # 眉毛
-        cv.rect(18, top + 10, 19, top + 10, dark(hair, 0.8))
+        cv.rect(12, top + 11, 13, top + 11, dark(hair, 0.8))  # 眉毛
+        cv.rect(18, top + 11, 19, top + 11, dark(hair, 0.8))
 
-    cv.rect(15, top + 16, 16, top + 16, skin_d)             # 嘴
+    cv.rect(15, top + 17, 16, top + 17, skin_d)             # 嘴
     if c.get('blush'):
-        cv.put(11, top + 15, BLUSH)
-        cv.put(20, top + 15, BLUSH)
+        cv.put(11, top + 16, BLUSH)
+        cv.put(20, top + 16, BLUSH)
 
     cv.rect(15, chin + 1, 16, CHIN + 1, skin_d)             # 脖子（底端固定，吸气时变长）
 
@@ -126,15 +136,15 @@ def draw_arms(cv, c):
     skin = c['skin']
     left = c.get('wide', False) and 6 or 7
     right = c.get('wide', False) and 25 or 24
-    cv.rect(left, 25, left + 1, 36, shirt_d)
-    cv.rect(right - 1, 25, right, 36, shirt_d)
+    cv.rect(left, 27, left + 1, 36, shirt_d)
+    cv.rect(right - 1, 27, right, 36, shirt_d)
     cv.rect(left, 37, left + 1, 37, skin)
     cv.rect(right - 1, 37, right, 37, skin)
 
 
 def draw_torso(cv, c):
     """上衣：按 style 画毛衣 / 连帽衫 / 夹克 / 衬衫。"""
-    t = 24
+    t = 26
     wide = c.get('wide', False)
     x0, x1 = (9, 22) if wide else (10, 21)
     b = 36 if c['bottom_style'] == 'pants' else 36

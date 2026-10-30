@@ -49,14 +49,14 @@ EYE_HI = (248, 240, 228, 255)    # 眼里的高光点，大头娃娃的「活气
 BLUSH = (222, 156, 134, 255)     # #DE9C86
 
 # 宝可梦红/绿宝石那种「大头糖豆人」比例：头占身高一半，身子和腿都只有一小截。
-HEAD_TOP = 4
-CHIN = 23
-NECK = 24
-TORSO_TOP = 24
-TORSO_BOT = 33
-SKIRT_TOP = 34
-SKIRT_BOT = 39
-LEG_TOP = 40
+HEAD_TOP = 3
+CHIN = 25
+NECK = 26
+TORSO_TOP = 26
+TORSO_BOT = 32
+SKIRT_TOP = 33
+SKIRT_BOT = 38
+LEG_TOP = 39
 BOOT_TOP = 46
 FOOT_BOT = 50
 
@@ -104,47 +104,60 @@ class Canvas(object):
 
 
 def draw_head(cv, facing, bob, rise=0):
-    """糖豆人大头：头几乎占身高一半，脸只占头的下半截，靠色块读表情。"""
+    """糖豆人大头：头再大一圈，长发做成上宽下窄、末端带弧度的发束，不做直筒。"""
     top = HEAD_TOP + bob - rise
     chin = CHIN + bob - rise
 
     if facing == 'side':
-        cv.ellipse(11, top + 9, 7, 8, HAIR)                 # 后脑一整块
-        cv.ellipse(16, top + 8, 7, 7, HAIR)                 # 头顶
-        cv.rect(6, top + 6, 12, chin + 3, HAIR)             # 长发垂到肩
-        cv.ellipse(17, top + 14, 6, 5, SKIN)                # 脸（侧脸窄一点）
-        cv.rect(11, top + 3, 22, top + 6, HAIR)             # 刘海压到眉上
-        cv.rect(11, top + 7, 18, top + 8, HAIR)             # 斜刘海
-        cv.rect(11, top + 9, 15, top + 12, HAIR)            # 前面的鬓角
-        cv.rect(9, top + 2, 18, top + 3, HAIR_M)            # 头顶高光
-        cv.rect(19, top + 12, 20, top + 14, EYE)            # 一只大眼
-        cv.put(19, top + 12, EYE_HI)
+        cv.ellipse(11, top + 10, 8, 9, HAIR)                # 后脑一整块
+        cv.ellipse(16, top + 9, 7, 8, HAIR)                 # 头顶
+        cv.rect(6, top + 7, 11, chin - 1, HAIR)             # 后侧长发（上宽）
+        cv.rect(7, chin, 10, chin + 2, HAIR)                # 下段收窄
+        cv.put(7, chin + 3, HAIR)                           # 末端小翘
+        cv.ellipse(17, top + 15, 6, 6, SKIN)                # 脸（侧脸窄一点）
+        cv.rect(11, top + 4, 22, top + 7, HAIR)             # 刘海压到眉上
+        cv.rect(12, top + 8, 18, top + 9, HAIR)             # 斜刘海
+        cv.rect(11, top + 10, 15, top + 13, HAIR)           # 前面的鬓角
+        cv.rect(9, top + 2, 19, top + 3, HAIR_M)            # 头顶高光
+        cv.rect(19, top + 13, 20, top + 15, EYE)            # 一只大眼
+        cv.put(19, top + 13, EYE_HI)
         cv.put(19, chin - 3, BLUSH)                         # 腮红
         cv.put(20, chin - 2, SKIN_D)                        # 嘴
     else:
         if facing == 'down':
-            cv.ellipse(16, top + 8, 9, 8, HAIR)             # 头发外轮廓
+            cv.ellipse(16, top + 9, 10, 9, HAIR)            # 头发外轮廓
             cv.put(16, top - 1, CLEAR)                      # 削掉椭圆顶上的单颗像素，不然像天线
-            cv.rect(7, top + 6, 9, chin + 3, HAIR)          # 左侧长发
-            cv.rect(22, top + 6, 24, chin + 3, HAIR)        # 右侧长发
-            cv.ellipse(16, top + 14, 6, 5, SKIN)            # 脸
-            cv.rect(12, top + 17, 19, chin, SKIN)           # 下巴补方，别收成尖下巴
-            cv.rect(9, top + 3, 22, top + 7, HAIR)          # 刘海横条（压住额头）
-            cv.rect(9, top + 8, 11, top + 10, HAIR)         # 左鬓角
-            cv.rect(20, top + 8, 22, top + 10, HAIR)        # 右鬓角
+            # 两侧长发：上宽下窄，末端往外翘一格，不再是直筒
+            cv.rect(6, top + 6, 9, chin - 2, HAIR)
+            cv.rect(7, chin - 1, 9, chin + 2, HAIR)
+            cv.put(6, chin + 2, HAIR)
+            cv.rect(22, top + 6, 25, chin - 2, HAIR)
+            cv.rect(22, chin - 1, 24, chin + 2, HAIR)
+            cv.put(25, chin + 2, HAIR)
+            cv.rect(8, top + 9, 9, chin - 3, HAIR_M)        # 内层亮发
+            cv.rect(22, top + 9, 23, chin - 3, HAIR_M)
+            cv.ellipse(16, top + 16, 6, 6, SKIN)            # 脸
+            cv.rect(12, top + 19, 19, chin, SKIN)           # 下巴补方
+            # 不对称刘海：一边长一点，边角收进去
+            cv.rect(9, top + 3, 22, top + 6, HAIR)
+            cv.rect(10, top + 7, 15, top + 8, HAIR)
+            cv.rect(13, top + 9, 17, top + 10, HAIR)
+            cv.rect(19, top + 7, 21, top + 8, HAIR)
             cv.rect(12, top + 1, 19, top + 2, HAIR_M)       # 头顶高光
-            cv.rect(12, top + 11, 13, top + 13, EYE)        # 左眼 2×3
-            cv.rect(18, top + 11, 19, top + 13, EYE)        # 右眼 2×3
-            cv.put(12, top + 11, EYE_HI)
-            cv.put(18, top + 11, EYE_HI)
-            cv.rect(15, top + 16, 16, top + 16, SKIN_D)     # 嘴
-            cv.put(11, top + 15, BLUSH)
-            cv.put(20, top + 15, BLUSH)
+            cv.rect(11, top + 12, 13, top + 14, EYE)        # 左眼 3×3
+            cv.rect(18, top + 12, 20, top + 14, EYE)        # 右眼 3×3
+            cv.put(11, top + 12, EYE_HI)
+            cv.put(18, top + 12, EYE_HI)
+            cv.rect(15, top + 17, 16, top + 17, SKIN_D)     # 嘴
+            cv.put(11, top + 16, BLUSH)
+            cv.put(20, top + 16, BLUSH)
         else:
-            cv.ellipse(16, top + 8, 9, 8, HAIR)             # 背面整片头发
+            cv.ellipse(16, top + 9, 10, 9, HAIR)            # 背面整片头发
             cv.put(16, top - 1, CLEAR)                      # 同样削掉顶上那一颗
-            cv.rect(7, top + 6, 24, chin + 3, HAIR)         # 长发盖住脖子
-            cv.rect(12, top + 2, 19, top + 4, HAIR_M)       # 头顶受光，跟着头的弧度走
+            cv.rect(6, top + 6, 25, chin, HAIR)             # 长发盖住脖子
+            cv.rect(7, chin + 1, 24, chin + 2, HAIR)        # 发尾收窄
+            cv.rect(12, top + 2, 19, top + 4, HAIR_M)       # 头顶受光
+            cv.rect(14, top + 5, 17, chin, HAIR_M)          # 中间一束亮发
 
     cv.rect(15, chin + 1, 16, NECK + bob + 1, SKIN_D)       # 脖子（底端固定，吸气时变长）
 
