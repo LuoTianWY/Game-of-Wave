@@ -48,8 +48,8 @@ def draw_head(cv, c, rise=0):
 
     if style == 'hood':
         hood = c['hood']
-        cv.ellipse(16, top + 9, 10, 9, hood)                # 兜帽外轮廓
-        cv.rect(6, top + 7, 25, chin + 3, hood)
+        cv.ellipse(16, top + 12, 11, 8, hood)               # 兜帽外轮廓（压扁）
+        cv.rect(6, top + 9, 25, chin + 3, hood)
         cv.ellipse(16, top + 12, 7, 8, dark(hood, 0.55))    # 帽子里的阴影
         cv.ellipse(16, top + 18, 4, 3, skin)                # 只露下半张脸
         cv.rect(13, top + 18, 18, chin, skin)
@@ -61,26 +61,26 @@ def draw_head(cv, c, rise=0):
         return
 
     # 头发外轮廓（所有非兜帽共用）
-    cv.ellipse(16, top + 11, 11, 11, hair)
+    cv.ellipse(16, top + 13, 11, 8, hair)
     cv.put(16, top - 1, CLEAR)                              # 削掉顶上的单颗像素
 
     if style == 'long':
-        cv.rect(4, top + 8, 8, chin - 3, hair)
+        cv.rect(4, top + 10, 8, chin - 3, hair)
         cv.rect(5, chin - 2, 8, chin + 1, hair)
         cv.put(4, chin + 1, hair)
-        cv.rect(23, top + 8, 27, chin - 3, hair)
+        cv.rect(23, top + 10, 27, chin - 3, hair)
         cv.rect(23, chin - 2, 26, chin + 1, hair)
         cv.put(27, chin + 1, hair)
         cv.rect(6, top + 11, 8, chin - 4, hair_l)
         cv.rect(23, top + 11, 25, chin - 4, hair_l)
     elif style == 'bob':
-        cv.rect(4, top + 8, 8, chin - 2, hair)
+        cv.rect(4, top + 10, 8, chin - 2, hair)
         cv.rect(5, chin - 1, 8, chin, hair)
-        cv.rect(23, top + 8, 27, chin - 2, hair)
+        cv.rect(23, top + 10, 27, chin - 2, hair)
         cv.rect(23, chin - 1, 26, chin, hair)
     else:                                                   # short / spiky / grey
-        cv.rect(6, top + 8, 8, top + 16, hair)
-        cv.rect(23, top + 8, 25, top + 16, hair)
+        cv.rect(6, top + 10, 8, top + 16, hair)
+        cv.rect(23, top + 10, 25, top + 16, hair)
         cv.put(9, top + 17, hair)
         cv.put(22, top + 17, hair)
 
@@ -111,7 +111,7 @@ def draw_head(cv, c, rise=0):
         cv.rect(9, top + 7, 11, top + 8, hair)
         cv.rect(20, top + 7, 22, top + 8, hair)
 
-    cv.rect(12, top + 1, 19, top + 2, hair_l)               # 头顶受光
+    cv.rect(12, top + 6, 19, top + 7, hair_l)               # 头顶受光
     cv.rect(11, top + 17, 13, top + 19, EYE)                # 左眼 3×3
     cv.rect(18, top + 17, 20, top + 19, EYE)                # 右眼 3×3
 
