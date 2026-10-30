@@ -49,15 +49,15 @@ EYE_HI = (248, 240, 228, 255)    # 眼里的高光点，大头娃娃的「活气
 BLUSH = (222, 156, 134, 255)     # #DE9C86
 
 # 宝可梦红/绿宝石那种「大头糖豆人」比例：头占身高一半，身子和腿都只有一小截。
-HEAD_TOP = 8
-CHIN = 33
-NECK = 34
-TORSO_TOP = 34
+HEAD_TOP = 5
+CHIN = 30
+NECK = 31
+TORSO_TOP = 31
 TORSO_BOT = 38
 SKIRT_TOP = 39
-SKIRT_BOT = 42
-LEG_TOP = 43
-BOOT_TOP = 44
+SKIRT_BOT = 43
+LEG_TOP = 44
+BOOT_TOP = 46
 FOOT_BOT = 50
 
 
