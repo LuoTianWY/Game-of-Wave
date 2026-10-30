@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace WaveTeam.Room
@@ -169,6 +170,28 @@ namespace WaveTeam.Room
         private void LoadSprites()
         {
             var all = Resources.LoadAll<Sprite>(ResourceDir);
+
+            // 有的引擎版本会把 PNG 当普通 Texture 导入，这种情况下 LoadAll<Sprite> 是空的。
+            // 运行时自己造 Sprite（脚底轴心、PPU 32），保证画面不会退回方块。
+            if (all == null || all.Length == 0)
+            {
+                var texs = Resources.LoadAll<Texture2D>(ResourceDir);
+                if (texs != null && texs.Length > 0)
+                {
+                    var made = new List<Sprite>();
+                    foreach (var t in texs)
+                    {
+                        if (t == null) continue;
+                        t.filterMode = FilterMode.Point;
+                        var s = Sprite.Create(t, new Rect(0f, 0f, t.width, t.height),
+                                              new Vector2(0.5f, 0f), 32f);
+                        s.name = t.name;
+                        made.Add(s);
+                    }
+                    if (made.Count > 0) all = made.ToArray();
+                }
+            }
+
             if (all == null || all.Length == 0)
             {
                 Debug.LogWarning("[主角] 找不到 " + ResourceDir + " 下的行走贴图，" +

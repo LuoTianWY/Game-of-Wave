@@ -146,7 +146,30 @@ namespace WaveTeam.Room
         {
             string key;
             if (profileName == null || !SpriteKeys.TryGetValue(profileName, out key)) return null;
-            return Resources.Load<Sprite>("Characters/Npc/npc_" + key + suffix);
+
+            string path = "Characters/Npc/npc_" + key + suffix;
+            var sprite = Resources.Load<Sprite>(path);
+            if (sprite != null) return sprite;
+
+            // 不同引擎版本/导入设置下，PNG 可能被当成普通 Texture 而不是 Sprite。
+            // 这时运行时兜底造一张（脚底轴心、PPU 32），保证组员那边不会退回方块。
+            var tex = Resources.Load<Texture2D>(path);
+            if (tex == null)
+            {
+                if (string.IsNullOrEmpty(suffix))
+                {
+                    Debug.LogWarning("[NPC] 找不到贴图 " + path +
+                                     "，该角色会退回方块。请确认已 pull 到最新，" +
+                                     "并且 Assets/Resources/Characters/Npc 下有这张 PNG。");
+                }
+                return null;
+            }
+
+            tex.filterMode = FilterMode.Point;
+            var made = Sprite.Create(tex, new Rect(0f, 0f, tex.width, tex.height),
+                                     new Vector2(0.5f, 0f), 32f);
+            made.name = tex.name;
+            return made;
         }
 
         /// <summary>
