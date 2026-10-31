@@ -12,11 +12,14 @@ namespace WaveTeam.UI
     {
         public const float PanelWidth = 320f;
         public const float TabWidth = 24f;
+        private const float TabVisualWidth = 34f;   // 拉手实际宽度（比收起后的可见宽度略宽）
         private const float ReferenceHeight = 1080f;
 
         private bool _expanded = true;
         private Transform _cardsRoot;
-        private PixelText _tabLabel;
+        private Image _tabArrow;
+        private Sprite _chevronRight;
+        private Sprite _chevronLeft;
         private readonly List<DrumCharacterCard> _cards = new List<DrumCharacterCard>();
 
         private const float HeaderHeight = 62f;   // 顶部「角色」标题占的高度，卡片整体让开
@@ -134,14 +137,56 @@ namespace WaveTeam.UI
             btn.onClick.AddListener(Toggle);
             var rt = (RectTransform)go.transform;
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 0.5f);
-            rt.sizeDelta = new Vector2(TabWidth, 120f);
+            rt.sizeDelta = new Vector2(TabVisualWidth, 132f);
             rt.anchoredPosition = Vector2.zero;
 
-            // 拉手箭头：▶ / ◀ 已在像素字图集里（Tools/make_pixel_font.py 的 EXTRA 补进去的），
-            // 展开时是 ▶（指向面板外），收起时是 ◀。
-            _tabLabel = PixelText.Create("Label", go.transform, "▶", 2f,
-                                         UIStyle.Text, PixelText.Align.Center);
-            _tabLabel.raycastTarget = false;
+            // 三个握把小点，暗示这里可以拉
+            for (int i = 0; i < 3; i++)
+            {
+                var dot = UIFactory.CreatePanel("Grip_" + i, go.transform, UIStyle.Text);
+                dot.raycastTarget = false;
+                UIFactory.Place((RectTransform)dot.transform, new Vector2(0f, 0.5f),
+                    new Vector2(3f, 3f), new Vector2(6f, 34f - i * 34f));
+            }
+
+            // 像素箭头（程序化画，比字体里的三角更清楚）
+            _chevronRight = MakeChevronSprite(16, UIStyle.Text, true);
+            _chevronLeft = MakeChevronSprite(16, UIStyle.Text, false);
+
+            var arrowGo = new GameObject("Arrow", typeof(RectTransform), typeof(Image));
+            arrowGo.transform.SetParent(go.transform, false);
+            _tabArrow = arrowGo.GetComponent<Image>();
+            _tabArrow.sprite = _chevronRight;
+            _tabArrow.raycastTarget = false;
+            UIFactory.Place((RectTransform)arrowGo.transform, new Vector2(0.5f, 0.5f),
+                new Vector2(16f, 16f), new Vector2(2f, 0f));
+        }
+
+        /// <summary>程序化画一个像素箭头（chevron），比字体三角在拉手上更醒目。</summary>
+        private static Sprite MakeChevronSprite(int size, Color color, bool pointRight)
+        {
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            tex.filterMode = FilterMode.Point;
+            var px = new Color[size * size];
+
+            int mid = size / 2;
+            for (int i = 0; i < mid; i++)
+            {
+                int x = pointRight ? i : size - 1 - i;
+                int y1 = mid - i;
+                int y2 = mid + i;
+                for (int t = 0; t < 2; t++)
+                {
+                    int xx = Mathf.Clamp(x + t, 0, size - 1);
+                    px[y1 * size + xx] = color;
+                    px[y2 * size + xx] = color;
+                }
+            }
+
+            tex.SetPixels(px);
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0f, 0f, size, size),
+                                 new Vector2(0.5f, 0.5f), size);
         }
 
         private void Toggle()
@@ -152,8 +197,9 @@ namespace WaveTeam.UI
 
         private void ApplyPanelPosition()
         {
-            Rect.anchoredPosition = new Vector2(_expanded ? 0f : PanelWidth - TabWidth, 0f);
-            if (_tabLabel != null) _tabLabel.Text = _expanded ? "▶" : "◀";
+            Rect.anchoredPosition = new Vector2(_expanded ? 0f : PanelWidth - TabVisualWidth, 0f);
+            if (_tabArrow != null)
+                _tabArrow.sprite = _expanded ? _chevronRight : _chevronLeft;
         }
 
         /// <summary>清空并重新陈列角色卡。</summary>
@@ -175,6 +221,12 @@ namespace WaveTeam.UI
                     1.1f, UIStyle.TextDim, PixelText.Align.Left,
                     new Vector2(0f, 1f), new Vector2(6f, -6f));
                 num.raycastTarget = false;
+
+                // 编号旁边一颗小色点，作为通道指示灯
+                var dot = UIFactory.CreatePanel("ChannelDot", rt, UIStyle.Accent2);
+                dot.raycastTarget = false;
+                UIFactory.Place((RectTransform)dot.transform, new Vector2(0f, 1f),
+                    new Vector2(6f, 6f), new Vector2(26f, -12f));
                 index++;
 
                 // 卡片之间的分隔槽

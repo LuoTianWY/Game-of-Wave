@@ -10,7 +10,8 @@ namespace WaveTeam.UI
     /// 鼓角色卡：波形预览 + 名字/性格名词 + 试听按钮 + 拖拽。
     /// 拖出侧栏后跟随鼠标；松开时若 OnDragEnd 返回 false（或未订阅），则回到原位。
     /// </summary>
-    public sealed class DrumCharacterCard : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
+    public sealed class DrumCharacterCard : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler,
+                                             IPointerEnterHandler, IPointerExitHandler
     {
         public const float Width = 280f;
         public const float Height = 132f;
@@ -25,6 +26,12 @@ namespace WaveTeam.UI
 
         private HexWaveformRenderer _waveform;
         private AudioSource _source;
+        private Image _bg;
+        private bool _dragging;
+        private bool _hovering;
+        private Vector2 _hoverPos;
+        private float _hoverScale = 1f;
+        private int _hoverSibling;
 
         private Transform _originalParent;
         private Vector2 _originalAnchored;
@@ -48,6 +55,7 @@ namespace WaveTeam.UI
             Rect.sizeDelta = new Vector2(Width, Height);
 
             var bg = GetComponent<Image>();
+            _bg = bg;
             UIResource.ApplyFrameOrColor(bg, "UI/card_bg", UIStyle.Card);
 
             // 波形预览（上半部）：六边形路径，节奏点高亮
@@ -132,6 +140,9 @@ namespace WaveTeam.UI
 
         public void OnBeginDrag(PointerEventData e)
         {
+            _dragging = true;
+            ResetHover();
+
             _originalParent = transform.parent;
             _originalAnchored = Rect.anchoredPosition;
             _originalPivot = Rect.pivot;
@@ -158,6 +169,40 @@ namespace WaveTeam.UI
             // 卡片是「模具」：无论是否成功落位都回到侧栏原位，可反复拖出复用（无限供给）
             if (OnDragEnd != null) OnDragEnd(this, e.position);
             ReturnToOrigin();
+            _dragging = false;
+        }
+
+        // ---------- 悬浮：整张卡轻微抬起 + 暖色高亮，强调可拖动 ----------
+
+        public void OnPointerEnter(PointerEventData e)
+        {
+            if (_dragging || _hovering) return;
+
+            _hovering = true;
+            _hoverPos = Rect.anchoredPosition;
+            _hoverScale = Rect.localScale.x;
+            _hoverSibling = transform.GetSiblingIndex();
+
+            transform.SetAsLastSibling();                 // 抬起来时压住相邻的卡
+            Rect.localScale = Vector3.one * 1.035f;
+            Rect.anchoredPosition = _hoverPos + new Vector2(0f, 6f);
+            if (_bg != null) _bg.color = Color.Lerp(Color.white, UIStyle.Accent, 0.18f);
+        }
+
+        public void OnPointerExit(PointerEventData e)
+        {
+            ResetHover();
+        }
+
+        private void ResetHover()
+        {
+            if (!_hovering) return;
+
+            _hovering = false;
+            Rect.localScale = Vector3.one * _hoverScale;
+            Rect.anchoredPosition = _hoverPos;
+            if (_bg != null) _bg.color = Color.white;
+            transform.SetSiblingIndex(_hoverSibling);
         }
 
         /// <summary>回到拖拽前的侧栏位置。</summary>

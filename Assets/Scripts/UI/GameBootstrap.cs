@@ -135,7 +135,7 @@ namespace WaveTeam.UI
             var rt = (RectTransform)_objectiveRoot.transform;
 
             rt.anchorMin = rt.anchorMax = rt.pivot =
-                new Vector2(0f, 1f);
+                new Vector2(0.5f, 1f);
 
             rt.sizeDelta = new Vector2(420f, 240f);
             rt.anchoredPosition = new Vector2(30f, -30f);
@@ -353,7 +353,7 @@ namespace WaveTeam.UI
             rt.sizeDelta = new Vector2(700f, 70f);
 
             rt.anchoredPosition =
-                new Vector2(170f, -84f);   // 和「回起点」同一行，摆在它右边
+                new Vector2(0f, -84f);     // 横向居中，高度仍和「回起点」同一行
 
 
             // 标题（沿用系统字：这几个字的像素字形不全，用系统字不会缺笔画）
