@@ -514,7 +514,7 @@ namespace WaveTeam.UI
             UIStyle.ApplyWell(screen, new Color(0.08f, 0.11f, 0.09f, 1f));
             var srt = (RectTransform)screen.transform;
             srt.anchorMin = srt.anchorMax = srt.pivot = new Vector2(0f, 1f);
-            srt.sizeDelta = new Vector2(520f, 84f);
+            srt.sizeDelta = new Vector2(660f, 84f);   // 状态栏加长，向右延展
             srt.anchoredPosition = new Vector2(ClusterX, -18f);
 
             var screenTag = UIFactory.PlacePixelText("ScreenTag", screen.transform, "STATUS", 1.2f,
@@ -534,7 +534,7 @@ namespace WaveTeam.UI
                     new Color(1f, 1f, 1f, 0.04f));
                 line.raycastTarget = false;
                 UIFactory.Place((RectTransform)line.transform, new Vector2(0f, 1f),
-                    new Vector2(500f, 1f), new Vector2(10f, -20f - i * 22f));
+                    new Vector2(640f, 1f), new Vector2(10f, -20f - i * 22f));
             }
 
             var rec = UIFactory.CreatePanel("Rec", screen.transform, UIStyle.Danger);
@@ -588,14 +588,14 @@ namespace WaveTeam.UI
                 new Color(0f, 0f, 0f, 0.35f));
             vuBack.raycastTarget = false;
             UIFactory.Place((RectTransform)vuBack.transform, new Vector2(0f, 1f),
-                new Vector2(250f, 34f), new Vector2(ClusterX + 592f, -24f));
+                new Vector2(250f, 34f), new Vector2(ClusterX + 692f, -24f));
 
             for (int i = 0; i < vu.Length; i++)
             {
                 var seg = UIFactory.CreatePanel("Vu_" + i, face.transform, vu[i]);
                 seg.raycastTarget = false;
                 UIFactory.Place((RectTransform)seg.transform, new Vector2(0f, 1f),
-                    new Vector2(18f, 22f), new Vector2(ClusterX + 600f + i * 24f, -30f));
+                    new Vector2(18f, 22f), new Vector2(ClusterX + 700f + i * 24f, -30f));
             }
 
             var bpm = UIFactory.CreatePanel("BpmWindow", face.transform,
@@ -603,7 +603,7 @@ namespace WaveTeam.UI
             bpm.raycastTarget = false;
             UIStyle.ApplyWell(bpm, new Color(0.08f, 0.11f, 0.09f, 1f));
             UIFactory.Place((RectTransform)bpm.transform, new Vector2(0f, 1f),
-                new Vector2(242f, 40f), new Vector2(ClusterX + 600f, -64f));
+                new Vector2(242f, 40f), new Vector2(ClusterX + 700f, -64f));
             var bpmText = UIFactory.PlacePixelText("BpmText", bpm.transform, "BPM 120 · 4/4", 1.6f,
                 UIStyle.Accent, PixelText.Align.Left,
                 new Vector2(0f, 0.5f), new Vector2(12f, 0f));
@@ -617,17 +617,17 @@ namespace WaveTeam.UI
                     i % 2 == 0 ? UIStyle.Accent2 : UIStyle.Ok);
                 bar.raycastTarget = false;
                 UIFactory.Place((RectTransform)bar.transform, new Vector2(0f, 0f),
-                    new Vector2(8f, wave[i]), new Vector2(352f + i * 15f, 10f));
+                    new Vector2(8f, wave[i]), new Vector2(470f + i * 15f, 10f));
             }
 
             // VU 两侧的 L / R 通道标
             var lText = UIFactory.PlacePixelText("VuL", face.transform, "L", 1.2f,
                 UIStyle.TextDim, PixelText.Align.Left,
-                new Vector2(0f, 1f), new Vector2(ClusterX + 600f, -8f));
+                new Vector2(0f, 1f), new Vector2(ClusterX + 700f, -8f));
             lText.raycastTarget = false;
             var rText = UIFactory.PlacePixelText("VuR", face.transform, "R", 1.2f,
                 UIStyle.TextDim, PixelText.Align.Left,
-                new Vector2(0f, 1f), new Vector2(ClusterX + 832f, -8f));
+                new Vector2(0f, 1f), new Vector2(ClusterX + 932f, -8f));
             rText.raycastTarget = false;
 
             // ---------- 装饰：两排旋钮 / 竖推子 / 插孔 ----------
