@@ -140,16 +140,7 @@ namespace WaveTeam.UI
             rt.sizeDelta = new Vector2(TabVisualWidth, 132f);
             rt.anchoredPosition = Vector2.zero;
 
-            // 三个握把小点，暗示这里可以拉
-            for (int i = 0; i < 3; i++)
-            {
-                var dot = UIFactory.CreatePanel("Grip_" + i, go.transform, UIStyle.Text);
-                dot.raycastTarget = false;
-                UIFactory.Place((RectTransform)dot.transform, new Vector2(0f, 0.5f),
-                    new Vector2(3f, 3f), new Vector2(6f, 34f - i * 34f));
-            }
-
-            // 像素箭头（程序化画，比字体里的三角更清楚）
+            // 只保留一个像素箭头（程序化画，比字体里的三角更清楚）
             _chevronRight = MakeChevronSprite(16, UIStyle.Text, true);
             _chevronLeft = MakeChevronSprite(16, UIStyle.Text, false);
 

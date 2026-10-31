@@ -10,8 +10,7 @@ namespace WaveTeam.UI
     /// 鼓角色卡：波形预览 + 名字/性格名词 + 试听按钮 + 拖拽。
     /// 拖出侧栏后跟随鼠标；松开时若 OnDragEnd 返回 false（或未订阅），则回到原位。
     /// </summary>
-    public sealed class DrumCharacterCard : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler,
-                                             IPointerEnterHandler, IPointerExitHandler
+    public sealed class DrumCharacterCard : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
     {
         public const float Width = 280f;
         public const float Height = 132f;
@@ -26,7 +25,6 @@ namespace WaveTeam.UI
 
         private HexWaveformRenderer _waveform;
         private AudioSource _source;
-        private Image _bg;
         private bool _dragging;
         private bool _hovering;
         private Vector2 _hoverPos;
@@ -55,7 +53,6 @@ namespace WaveTeam.UI
             Rect.sizeDelta = new Vector2(Width, Height);
 
             var bg = GetComponent<Image>();
-            _bg = bg;
             UIResource.ApplyFrameOrColor(bg, "UI/card_bg", UIStyle.Card);
 
             // 波形预览（上半部）：六边形路径，节奏点高亮
@@ -172,12 +169,32 @@ namespace WaveTeam.UI
             _dragging = false;
         }
 
-        // ---------- 悬浮：整张卡轻微抬起 + 暖色高亮，强调可拖动 ----------
+        // ---------- 悬浮：整张卡轻微抬起，强调可拖动 ----------
+        //
+        // 用每帧检测鼠标是否在卡片矩形内，而不是 IPointerEnter/Exit：
+        // 抬起时卡片会移动 6px，指针事件在边缘处容易收不到 Exit，
+        // 导致卡一直停在悬浮状态。轮询检测能保证一定回弹。
 
-        public void OnPointerEnter(PointerEventData e)
+        private void Update()
         {
-            if (_dragging || _hovering) return;
+            if (_dragging)
+            {
+                ResetHover();
+                return;
+            }
 
+            var canvas = GetComponentInParent<Canvas>();
+            Camera cam = (canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay)
+                ? canvas.worldCamera : null;
+            bool inside = RectTransformUtility.RectangleContainsScreenPoint(
+                Rect, Input.mousePosition, cam);
+
+            if (inside && !_hovering) ApplyHover();
+            else if (!inside && _hovering) ResetHover();
+        }
+
+        private void ApplyHover()
+        {
             _hovering = true;
             _hoverPos = Rect.anchoredPosition;
             _hoverScale = Rect.localScale.x;
@@ -186,12 +203,6 @@ namespace WaveTeam.UI
             transform.SetAsLastSibling();                 // 抬起来时压住相邻的卡
             Rect.localScale = Vector3.one * 1.035f;
             Rect.anchoredPosition = _hoverPos + new Vector2(0f, 6f);
-            if (_bg != null) _bg.color = Color.Lerp(Color.white, UIStyle.Accent, 0.18f);
-        }
-
-        public void OnPointerExit(PointerEventData e)
-        {
-            ResetHover();
         }
 
         private void ResetHover()
@@ -201,7 +212,6 @@ namespace WaveTeam.UI
             _hovering = false;
             Rect.localScale = Vector3.one * _hoverScale;
             Rect.anchoredPosition = _hoverPos;
-            if (_bg != null) _bg.color = Color.white;
             transform.SetSiblingIndex(_hoverSibling);
         }
 

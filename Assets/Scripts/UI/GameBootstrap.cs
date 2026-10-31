@@ -135,7 +135,7 @@ namespace WaveTeam.UI
             var rt = (RectTransform)_objectiveRoot.transform;
 
             rt.anchorMin = rt.anchorMax = rt.pivot =
-                new Vector2(0.5f, 1f);
+                new Vector2(0f, 1f);          // 主页面目标回左上角，不再居中
 
             rt.sizeDelta = new Vector2(420f, 240f);
             rt.anchoredPosition = new Vector2(30f, -30f);
@@ -338,7 +338,7 @@ namespace WaveTeam.UI
 
         private void BuildRehearsalGoalPanel()
         {
-            // 顶部左侧：本轮排练目标（收成一条窄横幅，放在标题条下方，避免压住音轨标尺）
+            // 音轨页顶部：本轮排练目标，横向居中放在「回起点」那一行
             var panel = UIFactory.CreatePanel(
                 "RehearsalGoalPanel",
                 _boardRoot.transform,
@@ -348,12 +348,12 @@ namespace WaveTeam.UI
             var rt = panel.rectTransform;
 
             rt.anchorMin = rt.anchorMax = rt.pivot =
-                new Vector2(0f, 1f);
+                new Vector2(0.5f, 1f);
 
             rt.sizeDelta = new Vector2(700f, 70f);
 
             rt.anchoredPosition =
-                new Vector2(0f, -84f);     // 横向居中，高度仍和「回起点」同一行
+                new Vector2(0f, -84f);
 
 
             // 标题（沿用系统字：这几个字的像素字形不全，用系统字不会缺笔画）
