@@ -199,6 +199,12 @@ namespace WaveTeam.UI
                 UIFactory.Place((RectTransform)chipDot.transform, new Vector2(0f, 0.5f),
                     new Vector2(4f, 4f), new Vector2(10f, ry + 18f));
 
+                // 轨名下方一条同色短横线，和色块呼应
+                var bar = UIFactory.CreatePanel("TrackBar_" + t, root, trackTint[t]);
+                bar.raycastTarget = false;
+                UIFactory.Place((RectTransform)bar.transform, new Vector2(0f, 0.5f),
+                    new Vector2(56f, 2f), new Vector2(4f, ry - 20f));
+
                 for (int b = 0; b < (int)TrackLengthBeats; b++)
                 {
                     var slotColor = b % 2 == 0 ? UIStyle.Cell : UIStyle.CellAlt;
@@ -373,6 +379,14 @@ namespace WaveTeam.UI
             _sectionLabels.Add(rt);
             _sectionCenters.Add(centerBeat);
             _sectionSpans.Add(span);
+
+            // 每个段落标题下的一小截强调线
+            var underline = UIFactory.CreatePanel("Underline_" + name, root,
+                new Color(1f, 1f, 1f, 0.12f));
+            underline.raycastTarget = false;
+            UIFactory.Place((RectTransform)underline.transform, new Vector2(0f, 0.5f),
+                new Vector2(_space.SpanToWidth(span) * 0.6f, 2f),
+                new Vector2(_space.ToX(centerBeat), TrackCenterOffset + TrackBlockHalf + 2f));
         }
 
         /// <summary>
