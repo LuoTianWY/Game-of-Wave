@@ -563,7 +563,7 @@ namespace WaveTeam.UI
 
             var exit = CreateSquareKey("Exit", face.transform, "退出", UIStyle.Grey, OnExitBoard);
             UIFactory.Place((RectTransform)exit.transform, new Vector2(1f, 0f),
-                new Vector2(52f, 92f), new Vector2(-36f, 22f));
+                new Vector2(52f, 92f), new Vector2(-60f, 22f));
 
             // ---------- 屏幕旁：VU 电平表 + BPM 小窗 ----------
             Color[] vu = { UIStyle.Ok, UIStyle.Ok, UIStyle.Ok, UIStyle.Ok,
@@ -593,7 +593,7 @@ namespace WaveTeam.UI
             {
                 int row = i / 3;
                 int col = i % 3;
-                float kx = 880f + col * 58f;
+                float kx = 780f + col * 54f;
                 float ky = row == 0 ? 104f : 32f;
 
                 var knob = UIFactory.CreatePanel("Knob_" + i, face.transform, UIStyle.Grey);
@@ -618,15 +618,15 @@ namespace WaveTeam.UI
                 new Color(0f, 0f, 0f, 0.40f));
             groove.raycastTarget = false;
             UIFactory.Place((RectTransform)groove.transform, new Vector2(0f, 0f),
-                new Vector2(10f, 150f), new Vector2(1120f, 22f));
+                new Vector2(10f, 150f), new Vector2(960f, 22f));
             var faderFill = UIFactory.CreatePanel("FaderFill", face.transform, UIStyle.Accent2);
             faderFill.raycastTarget = false;
             UIFactory.Place((RectTransform)faderFill.transform, new Vector2(0f, 0f),
-                new Vector2(10f, 96f), new Vector2(1120f, 22f));
+                new Vector2(10f, 96f), new Vector2(960f, 22f));
             var faderCap = UIFactory.CreatePanel("FaderCap", face.transform, UIStyle.Text);
             faderCap.raycastTarget = false;
             UIFactory.Place((RectTransform)faderCap.transform, new Vector2(0f, 0f),
-                new Vector2(32f, 16f), new Vector2(1120f, 118f));
+                new Vector2(32f, 16f), new Vector2(960f, 118f));
 
             // 三个插孔（圆形的输入口）
             for (int i = 0; i < 3; i++)
@@ -634,8 +634,8 @@ namespace WaveTeam.UI
                 var jack = UIFactory.CreatePanel("Jack_" + i, face.transform, UIStyle.Grey);
                 jack.raycastTarget = false;
                 jack.sprite = MakeCircleSprite(18, UIStyle.EdgeDeep, UIStyle.Grey);
-                UIFactory.Place((RectTransform)jack.transform, new Vector2(1f, 0f),
-                    new Vector2(18f, 18f), new Vector2(-96f - i * 30f, 20f));
+                UIFactory.Place((RectTransform)jack.transform, new Vector2(0f, 0f),
+                    new Vector2(18f, 18f), new Vector2(1040f + i * 30f, 20f));
             }
 
             // LED 灯条（右上角）
@@ -645,7 +645,7 @@ namespace WaveTeam.UI
                 var led = UIFactory.CreatePanel("Led_" + i, face.transform, leds[i]);
                 led.raycastTarget = false;
                 UIFactory.Place((RectTransform)led.transform, new Vector2(1f, 1f),
-                    new Vector2(14f, 14f), new Vector2(-40f - i * 26f, -30f));
+                    new Vector2(14f, 14f), new Vector2(-70f - i * 26f, -30f));
             }
 
             // 四角螺丝
@@ -655,7 +655,7 @@ namespace WaveTeam.UI
                 screw.raycastTarget = false;
                 UIFactory.Place((RectTransform)screw.transform, corner,
                     new Vector2(10f, 10f),
-                    new Vector2(corner.x > 0.5f ? -9f : 9f, corner.y > 0.5f ? -9f : 9f));
+                    new Vector2(corner.x > 0.5f ? -13f : 9f, corner.y > 0.5f ? -13f : 9f));
             }
         }
 
