@@ -412,7 +412,7 @@ namespace WaveTeam.UI
             var hRt = (RectTransform)header.transform;
             hRt.anchorMin = new Vector2(0f, 1f);
             hRt.anchorMax = new Vector2(1f, 1f);
-            hRt.pivot = new Vector2(0.5f, 1f);
+            hRt.pivot = new Vector2(0f, 1f);              // 同样靠左，别压住角色栏标题
             // 宽度要扣掉右侧角色栏那 320px，否则顶栏会盖住侧栏的「角色」标题
             hRt.sizeDelta = new Vector2(-RosterSidebar.PanelWidth, HeaderHeight);
             hRt.anchoredPosition = Vector2.zero;
@@ -507,7 +507,7 @@ namespace WaveTeam.UI
             var prt = (RectTransform)plate.transform;
             prt.anchorMin = new Vector2(0f, 0f);
             prt.anchorMax = new Vector2(1f, 0f);
-            prt.pivot = new Vector2(0.5f, 0f);
+            prt.pivot = new Vector2(0f, 0f);              // 靠左贴齐，右缘正好停在角色栏左边
             prt.sizeDelta = new Vector2(-RosterSidebar.PanelWidth, ConsoleHeight);
             prt.anchoredPosition = Vector2.zero;
 
