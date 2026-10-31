@@ -211,6 +211,8 @@ namespace WaveTeam.UI
         {
             if (_characterPanel != null) return;
 
+            Debug.Log("[目标] 打开角色面板：" + (profile != null ? profile.Name : "(null)"));
+
             if (_npcInteractor != null)
                 _npcInteractor.SetLocked(true);
 
@@ -226,6 +228,8 @@ namespace WaveTeam.UI
             if (profile == null) return;
 
             _talkedNpcs.Add(profile.Name);
+            Debug.Log("[目标] 已和「" + profile.Name + "」聊天，当前已完成：" +
+                      string.Join("、", _talkedNpcs));
 
             RefreshObjectiveUI();
             RefreshEnterBoardState();
