@@ -532,7 +532,7 @@ namespace WaveTeam.UI
             var srt = (RectTransform)screen.transform;
             srt.anchorMin = srt.anchorMax = srt.pivot = new Vector2(0f, 1f);
             srt.sizeDelta = new Vector2(520f, 84f);
-            srt.anchoredPosition = new Vector2(24f, -18f);
+            srt.anchoredPosition = new Vector2(0f, -18f);
 
             var screenTag = UIFactory.PlacePixelText("ScreenTag", screen.transform, "STATUS", 1.2f,
                 UIStyle.TextDim, PixelText.Align.Left,
@@ -547,11 +547,11 @@ namespace WaveTeam.UI
             // ---------- 面板上的按钮 ----------
             var confirm = CreateSquareKey("Confirm", face.transform, "确定", UIStyle.Ok, OnConfirm);
             UIFactory.Place((RectTransform)confirm.transform, new Vector2(0f, 0f),
-                new Vector2(58f, 58f), new Vector2(36f, 26f));
+                new Vector2(58f, 58f), new Vector2(0f, 26f));
 
             var cancel = CreateSquareKey("Cancel", face.transform, "取消", UIStyle.Grey, OnCancel);
             UIFactory.Place((RectTransform)cancel.transform, new Vector2(0f, 0f),
-                new Vector2(58f, 58f), new Vector2(116f, 26f));
+                new Vector2(58f, 58f), new Vector2(70f, 26f));
 
             var play = CreateRoundKey("Play", face.transform, 92, UIStyle.Accent, "演出！", 2.2f, UIStyle.Ink, OnPlay);
             UIFactory.Place((RectTransform)play.transform, new Vector2(0f, 0f),
@@ -645,7 +645,7 @@ namespace WaveTeam.UI
                 var led = UIFactory.CreatePanel("Led_" + i, face.transform, leds[i]);
                 led.raycastTarget = false;
                 UIFactory.Place((RectTransform)led.transform, new Vector2(0f, 1f),
-                    new Vector2(14f, 14f), new Vector2(24f + i * 26f, -110f));
+                    new Vector2(14f, 14f), new Vector2(0f + i * 26f, -110f));
             }
 
             // 四角螺丝
