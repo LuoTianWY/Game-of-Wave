@@ -520,7 +520,13 @@ namespace WaveTeam.UI
             if (consoleArt == null)
                 UIResource.ApplyWellOrColor(face, "UI/cell_slot", UIStyle.Cell);
             var frt = (RectTransform)face.transform;
-            frt.anchorMin = frt.anchorMax = frt.pivot = new Vector2(0.5f, 0f);
+            // 横向必须用「拉伸锚点」：anchorMin.x=0 / anchorMax.x=1，
+            // 这样 sizeDelta.x = -28 才是「左右各缩 14」，面板宽度 = 控制台宽 - 28。
+            // 之前这里用的是点锚点（0.5,0），sizeDelta 被当成实际宽度，算出来是 -28，
+            // 整块面板退化成一条线，子元素全部被推到屏幕中间偏右。
+            frt.anchorMin = new Vector2(0f, 0f);
+            frt.anchorMax = new Vector2(1f, 0f);
+            frt.pivot = new Vector2(0.5f, 0f);
             frt.sizeDelta = new Vector2(-PlatePad * 2f, ConsoleHeight - PlatePad * 2f);
             frt.anchoredPosition = new Vector2(0f, PlatePad);
 
