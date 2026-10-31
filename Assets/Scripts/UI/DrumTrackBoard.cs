@@ -41,7 +41,7 @@ namespace WaveTeam.UI
         public const float DefaultPixelsPerBeat = 120f; // 1 拍 = 120px（16 拍 ≈ 一屏），板子只做整体效果演示，微调进细节面板
         public const float SnapBeat = 1f;               // 吸附到整格（整数拍），不再 0.5 拍
         public const float TrackLengthBeats = 16f;
-        public const int TrackCount = 4;                 // 四条音轨上下并排
+        public const int TrackCount = 3;                 // 三条音轨上下并排
         public const float TrackHeight = 150f;           // 单条音轨的高度
         public const float TrackGap = 14f;               // 轨与轨之间的间距
 
