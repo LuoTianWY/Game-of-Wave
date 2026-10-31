@@ -184,9 +184,10 @@ namespace WaveTeam.UI
         {
             if (_enterBoardButton == null) return;
 
-            bool ready = AreRequiredNpcsTalked();
-
-            _enterBoardButton.interactable = ready;
+            // 暂时放开「先和三位 NPC 聊天」的门槛：按钮随时可点，直接进音轨板。
+            // 任务清单保留为提示；要恢复门槛，把这里改回
+            // `_enterBoardButton.interactable = AreRequiredNpcsTalked();`
+            _enterBoardButton.interactable = true;
         }
 
 
