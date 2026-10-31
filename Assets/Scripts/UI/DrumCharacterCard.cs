@@ -13,7 +13,7 @@ namespace WaveTeam.UI
     public sealed class DrumCharacterCard : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
     {
         public const float Width = 280f;
-        public const float Height = 150f;
+        public const float Height = 132f;
 
         public DrumCharacter Character { get; private set; }
 
@@ -68,7 +68,7 @@ namespace WaveTeam.UI
 
             // 名字 + 性格名词（左下），像素字
             var label = UIFactory.PlacePixelText("Label", transform,
-                Character.Name + " · " + Character.Noun, 2f,
+                Character.Name + " · " + Character.Noun, 1.7f,
                 UIStyle.Text, PixelText.Align.Left,
                 new Vector2(0f, 0f), new Vector2(10f, 8f));
             label.raycastTarget = false;

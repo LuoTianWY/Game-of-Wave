@@ -120,7 +120,8 @@ namespace WaveTeam.UI
             Rect.pivot = new Vector2(0f, 0.5f);
 
             var bg = GetComponent<Image>();
-            UIResource.ApplySpriteOrColor(bg, "UI/baseplate", UIStyle.Stage);
+            // 音轨区用偏冷的深青灰，和下方暖木色调音台拉开层次
+            UIResource.ApplySpriteOrColor(bg, "UI/baseplate", new Color(0.10f, 0.14f, 0.15f, 1f));
             DrawPlanks();
 
             _space = new BeatSpace(DefaultPixelsPerBeat, LeftMargin);
@@ -180,23 +181,23 @@ namespace WaveTeam.UI
                 laneRt.anchoredPosition = new Vector2(0f, ry);
                 laneRt.sizeDelta = new Vector2(0f, TrackHeight + 2f);
 
-                var name = PixelText.Create("TrackName_" + t, root, "音轨 " + (TrackCount - t),
-                                            1.5f, UIStyle.Text, PixelText.Align.Center);
+                var name = PixelText.Create("TrackName_" + t, root, "音轨" + (TrackCount - t),
+                                            1.2f, UIStyle.Text, PixelText.Align.Center);
                 name.raycastTarget = false;
                 var nrt = (RectTransform)name.transform;
                 nrt.anchorMin = nrt.anchorMax = nrt.pivot = new Vector2(0f, 0.5f);
-                nrt.anchoredPosition = new Vector2(LeftMargin * 0.72f, ry);
+                nrt.anchoredPosition = new Vector2(LeftMargin * 0.35f, ry);
 
                 // 轨名上方的小色块（每条轨一个颜色 + 一点高光），一眼分清三条轨
                 var chip = UIFactory.CreatePanel("TrackChip_" + t, root, trackTint[t]);
                 chip.raycastTarget = false;
                 UIFactory.Place((RectTransform)chip.transform, new Vector2(0f, 0.5f),
-                    new Vector2(16f, 16f), new Vector2(10f, ry + 16f));
+                    new Vector2(12f, 12f), new Vector2(6f, ry + 18f));
                 var chipDot = UIFactory.CreatePanel("TrackDot_" + t, root,
                     new Color(1f, 1f, 1f, 0.55f));
                 chipDot.raycastTarget = false;
                 UIFactory.Place((RectTransform)chipDot.transform, new Vector2(0f, 0.5f),
-                    new Vector2(4f, 4f), new Vector2(16f, ry + 16f));
+                    new Vector2(4f, 4f), new Vector2(10f, ry + 18f));
 
                 for (int b = 0; b < (int)TrackLengthBeats; b++)
                 {
@@ -239,6 +240,28 @@ namespace WaveTeam.UI
                     num.raycastTarget = false;
                 }
             }
+
+            // 轨道区四角的固定螺栓 + 底部压条，让整块音轨像嵌在机架里
+            float blockTop = TrackCenterOffset + TrackBlockHalf;
+            float blockBottom = TrackCenterOffset - TrackBlockHalf;
+            foreach (var p in new[]
+            {
+                new Vector2(LeftMargin - 18f, blockTop),
+                new Vector2(LeftMargin - 18f, blockBottom),
+                new Vector2(1580f, blockTop),
+                new Vector2(1580f, blockBottom)
+            })
+            {
+                var bolt = UIFactory.CreatePanel("TrackBolt", root, new Color(0f, 0f, 0f, 0.45f));
+                bolt.raycastTarget = false;
+                UIFactory.Place((RectTransform)bolt.transform, new Vector2(0f, 0.5f),
+                    new Vector2(8f, 8f), p);
+            }
+
+            var bottomRail = UIFactory.CreatePanel("BottomRail", root, new Color(1f, 1f, 1f, 0.08f));
+            bottomRail.raycastTarget = false;
+            UIFactory.Place((RectTransform)bottomRail.transform, new Vector2(0f, 0.5f),
+                new Vector2(1500f, 2f), new Vector2(LeftMargin, blockBottom - 10f));
 
             // 拍线（每 4 拍加粗提亮为小节线）
             for (int b = 0; b <= (int)TrackLengthBeats; b++)

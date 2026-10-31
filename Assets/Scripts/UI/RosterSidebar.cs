@@ -40,7 +40,8 @@ namespace WaveTeam.UI
             Rect.anchoredPosition = Vector2.zero;
 
             var bg = GetComponent<Image>();
-            UIResource.ApplyFrameOrColor(bg, "UI/sidebar", UIStyle.Panel);
+            // 侧栏用偏紫的深咖色，和青灰色的音轨区、暖木色的调音台形成三个色区
+            UIResource.ApplyFrameOrColor(bg, "UI/sidebar", new Color(0.20f, 0.145f, 0.15f, 1f));
 
             // 卡片陈列区背后的暗槽，让整列卡片像卡在设备槽里
             var shelf = UIFactory.CreatePanel("CardShelf", transform, new Color(0f, 0f, 0f, 0.20f));
@@ -161,7 +162,15 @@ namespace WaveTeam.UI
                 var rt = card.Rect;
                 rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 1f);
                 rt.anchoredPosition = new Vector2(TabWidth + 12f, y);
-                y -= DrumCharacterCard.Height + 12f;
+
+                // 卡片之间的分隔槽
+                var sep = UIFactory.CreatePanel("CardSep", _cardsRoot, new Color(1f, 1f, 1f, 0.06f));
+                sep.raycastTarget = false;
+                UIFactory.Place((RectTransform)sep.transform, new Vector2(0f, 1f),
+                    new Vector2(PanelWidth - TabWidth - 28f, 1f),
+                    new Vector2(TabWidth + 14f, y - DrumCharacterCard.Height - 5f));
+
+                y -= DrumCharacterCard.Height + 10f;
             }
         }
 

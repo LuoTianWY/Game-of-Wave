@@ -339,11 +339,11 @@ namespace WaveTeam.UI
 
         private void BuildRehearsalGoalPanel()
         {
-            // 左上角：本轮排练目标
+            // 顶部左侧：本轮排练目标（收成一条窄横幅，放在标题条下方，避免压住音轨标尺）
             var panel = UIFactory.CreatePanel(
                 "RehearsalGoalPanel",
                 _boardRoot.transform,
-                new Color(0.10f, 0.10f, 0.10f, 0.82f)
+                new Color(0.12f, 0.17f, 0.16f, 0.92f)
             );
 
             var rt = panel.rectTransform;
@@ -351,56 +351,32 @@ namespace WaveTeam.UI
             rt.anchorMin = rt.anchorMax = rt.pivot =
                 new Vector2(0f, 1f);
 
-            rt.sizeDelta = new Vector2(380f, 130f);
+            rt.sizeDelta = new Vector2(560f, 54f);
 
             rt.anchoredPosition =
-                new Vector2(20f, -88f);
+                new Vector2(16f, -84f);
 
 
-            // 标题
+            // 标题（沿用系统字：这几个字的像素字形不全，用系统字不会缺笔画）
             var title = UIFactory.CreateText(
-                "GoalTitle",
-                panel.transform,
-                "本轮排练目标",
-                24,
-                UIStyle.Text,
-                TextAnchor.MiddleLeft
-            );
-
+                "GoalTitle", panel.transform, "本轮排练目标", 18, UIStyle.Accent,
+                TextAnchor.MiddleLeft);
             title.raycastTarget = false;
-
             var titleRt = (RectTransform)title.transform;
-
-            titleRt.anchorMin = titleRt.anchorMax = titleRt.pivot =
-                new Vector2(0f, 1f);
-
-            titleRt.sizeDelta = new Vector2(340f, 30f);
-
-            titleRt.anchoredPosition =
-                new Vector2(18f, -12f);
+            titleRt.anchorMin = titleRt.anchorMax = titleRt.pivot = new Vector2(0f, 1f);
+            titleRt.sizeDelta = new Vector2(140f, 40f);
+            titleRt.anchoredPosition = new Vector2(14f, -7f);
 
 
             // 目标内容
             var goals = UIFactory.CreateText(
-                "GoalContent",
-                panel.transform,
-                "开场：需要稳定\n发展：增加层次\n整体：避免过度拥挤",
-                20,
-                UIStyle.Text,
-                TextAnchor.UpperLeft
-            );
-
+                "GoalContent", panel.transform, "稳定开场 · 增加层次 · 避免拥挤", 17,
+                UIStyle.Text, TextAnchor.UpperLeft);
             goals.raycastTarget = false;
-
             var goalsRt = (RectTransform)goals.transform;
-
-            goalsRt.anchorMin = goalsRt.anchorMax = goalsRt.pivot =
-                new Vector2(0f, 1f);
-
-            goalsRt.sizeDelta = new Vector2(340f, 80f);
-
-            goalsRt.anchoredPosition =
-                new Vector2(18f, -46f);
+            goalsRt.anchorMin = goalsRt.anchorMax = goalsRt.pivot = new Vector2(0f, 1f);
+            goalsRt.sizeDelta = new Vector2(340f, 40f);
+            goalsRt.anchoredPosition = new Vector2(170f, -7f);
         }
 
         private void BuildPlayback()
