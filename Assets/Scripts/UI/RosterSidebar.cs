@@ -42,6 +42,25 @@ namespace WaveTeam.UI
             var bg = GetComponent<Image>();
             UIResource.ApplyFrameOrColor(bg, "UI/sidebar", UIStyle.Panel);
 
+            // 卡片陈列区背后的暗槽，让整列卡片像卡在设备槽里
+            var shelf = UIFactory.CreatePanel("CardShelf", transform, new Color(0f, 0f, 0f, 0.20f));
+            shelf.raycastTarget = false;
+            var shrt = (RectTransform)shelf.transform;
+            shrt.anchorMin = Vector2.zero;
+            shrt.anchorMax = Vector2.one;
+            shrt.offsetMin = new Vector2(TabWidth + 10f, 10f);
+            shrt.offsetMax = new Vector2(-10f, -HeaderHeight - 6f);
+
+            // 面板四角螺丝
+            foreach (var corner in new[] { new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, 1f), new Vector2(1f, 1f) })
+            {
+                var screw = UIFactory.CreatePanel("Screw", transform, UIStyle.EdgeDeep);
+                screw.raycastTarget = false;
+                UIFactory.Place((RectTransform)screw.transform, corner,
+                    new Vector2(10f, 10f),
+                    new Vector2(corner.x > 0.5f ? -9f : 9f, corner.y > 0.5f ? -9f : 9f));
+            }
+
             // 卡片容器（面板左起 TabWidth 处开始摆卡）
             _cardsRoot = new GameObject("Cards", typeof(RectTransform)).transform;
             _cardsRoot.SetParent(transform, false);
@@ -64,6 +83,11 @@ namespace WaveTeam.UI
                                                  new Vector2(0f, 1f),
                                                  new Vector2(TabWidth + 16f, -18f));
             title.raycastTarget = false;
+
+            var led = UIFactory.CreatePanel("HeaderLed", transform, UIStyle.Accent2);
+            led.raycastTarget = false;
+            UIFactory.Place((RectTransform)led.transform, new Vector2(1f, 1f),
+                            new Vector2(14f, 14f), new Vector2(-30f, -20f));
 
             var divider = UIFactory.CreatePanel("Divider", transform, UIStyle.Line);
             divider.raycastTarget = false;

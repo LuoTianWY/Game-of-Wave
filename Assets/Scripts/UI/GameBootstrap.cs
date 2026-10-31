@@ -351,10 +351,10 @@ namespace WaveTeam.UI
             rt.anchorMin = rt.anchorMax = rt.pivot =
                 new Vector2(0f, 1f);
 
-            rt.sizeDelta = new Vector2(380f, 165f);
+            rt.sizeDelta = new Vector2(380f, 130f);
 
             rt.anchoredPosition =
-                new Vector2(20f, -150f);
+                new Vector2(20f, -88f);
 
 
             // 标题
@@ -374,10 +374,10 @@ namespace WaveTeam.UI
             titleRt.anchorMin = titleRt.anchorMax = titleRt.pivot =
                 new Vector2(0f, 1f);
 
-            titleRt.sizeDelta = new Vector2(340f, 35f);
+            titleRt.sizeDelta = new Vector2(340f, 30f);
 
             titleRt.anchoredPosition =
-                new Vector2(18f, -15f);
+                new Vector2(18f, -12f);
 
 
             // 目标内容
@@ -397,10 +397,10 @@ namespace WaveTeam.UI
             goalsRt.anchorMin = goalsRt.anchorMax = goalsRt.pivot =
                 new Vector2(0f, 1f);
 
-            goalsRt.sizeDelta = new Vector2(340f, 105f);
+            goalsRt.sizeDelta = new Vector2(340f, 80f);
 
             goalsRt.anchoredPosition =
-                new Vector2(18f, -55f);
+                new Vector2(18f, -46f);
         }
 
         private void BuildPlayback()
@@ -417,11 +417,12 @@ namespace WaveTeam.UI
             hRt.sizeDelta = new Vector2(-RosterSidebar.PanelWidth, HeaderHeight);
             hRt.anchoredPosition = Vector2.zero;
 
-            _statusText = UIFactory.PlacePixelText("Status", _boardRoot.transform,
-                "把右侧角色拖到鼓轨上（同轨不重叠）· 左键拖动移动 · 右键收回", 2f,
+            // 顶栏提示：状态文字挪到下方调音台的屏幕里了，这里只留操作说明
+            var hint = UIFactory.PlacePixelText("Hints", _boardRoot.transform,
+                "把右侧角色拖到鼓轨上（同轨不重叠）· 左键拖动移动 · 右键收回", 1.8f,
                 UIStyle.Text, PixelText.Align.Center,
                 new Vector2(0.5f, 1f), new Vector2(0f, -24f));
-            _statusText.raycastTarget = false;
+            hint.raycastTarget = false;
 
             // BGM / 演出播放器跨「进入-退出」复用，避免重复 AddComponent 累积 AudioSource
             if (_bgm == null) _bgm = gameObject.AddComponent<BgmPlayer>();
@@ -474,58 +475,184 @@ namespace WaveTeam.UI
         }
 
         private const float HeaderHeight = 74f;   // 顶部提示条高度
-        private const float BottomBarHeight = 72f; // 底部工具栏高度
+        private const float ConsoleHeight = 240f;  // 底部调音台机器高度
 
         /// <summary>
-        /// 底部一条通栏木制工具栏，按钮全部垂直居中对齐：
-        /// 左：确定 / 取消；中：演出！/ 停止；右：退出。
-        /// 原来是五个按钮散在三个角落、高度还不一致，主次分不出来。
+        /// 底部「排练室调音台」：一台像素风的调试机器。
+        /// 机器上半部分是状态屏幕，下半部面板上散布着形状各异的按钮
+        /// （方键确定/取消、圆形主键演出！、圆形红键停止、右侧窄条退出），
+        /// 再点缀旋钮、LED 灯和螺丝，像个真的工作室设备。
         /// </summary>
         private void BuildBottomBar()
         {
-            var bar = UIFactory.CreatePanel("BottomBar", _boardRoot.transform, UIStyle.Stage);
-            bar.raycastTarget = false;
-            UIResource.ApplyFrameOrColor(bar, "UI/header", UIStyle.Stage);
-            var brt = (RectTransform)bar.transform;
-            brt.anchorMin = new Vector2(0f, 0f);
-            brt.anchorMax = new Vector2(1f, 0f);
-            brt.pivot = new Vector2(0.5f, 0f);
-            brt.sizeDelta = new Vector2(-RosterSidebar.PanelWidth, BottomBarHeight);
-            brt.anchoredPosition = Vector2.zero;
+            const float PlatePad = 14f;
 
-            // 次要按钮：44 高，垂直居中
-            float y = (BottomBarHeight - 44f) * 0.5f;
-            var confirm = UIFactory.CreatePixelButton("Confirm", _boardRoot.transform, "确定", 1.8f,
-                UIStyle.Ok, UIStyle.Ink, OnConfirm);
-            UIResource.ApplyFrameOrColor(confirm.image, "UI/btn_confirm", UIStyle.Ok);
+            // 机器底板：木框
+            var plate = UIFactory.CreatePanel("MixerConsole", _boardRoot.transform, UIStyle.Stage);
+            plate.raycastTarget = false;
+            UIResource.ApplyFrameOrColor(plate, "UI/header", UIStyle.Stage);
+            var prt = (RectTransform)plate.transform;
+            prt.anchorMin = new Vector2(0f, 0f);
+            prt.anchorMax = new Vector2(1f, 0f);
+            prt.pivot = new Vector2(0.5f, 0f);
+            prt.sizeDelta = new Vector2(-RosterSidebar.PanelWidth, ConsoleHeight);
+            prt.anchoredPosition = Vector2.zero;
+
+            // 内嵌的暗色操作面板
+            var face = UIFactory.CreatePanel("Faceplate", plate.transform, UIStyle.Cell);
+            face.raycastTarget = false;
+            UIResource.ApplyWellOrColor(face, "UI/cell_slot", UIStyle.Cell);
+            var frt = (RectTransform)face.transform;
+            frt.anchorMin = frt.anchorMax = frt.pivot = new Vector2(0.5f, 0f);
+            frt.sizeDelta = new Vector2(-PlatePad * 2f, ConsoleHeight - PlatePad * 2f);
+            frt.anchoredPosition = new Vector2(0f, PlatePad);
+
+            // ---------- 状态屏幕（机器上方） ----------
+            var screen = UIFactory.CreatePanel("Monitor", face.transform,
+                new Color(0.08f, 0.11f, 0.09f, 1f));
+            screen.raycastTarget = false;
+            UIStyle.ApplyWell(screen, new Color(0.08f, 0.11f, 0.09f, 1f));
+            var srt = (RectTransform)screen.transform;
+            srt.anchorMin = srt.anchorMax = srt.pivot = new Vector2(0f, 1f);
+            srt.sizeDelta = new Vector2(520f, 84f);
+            srt.anchoredPosition = new Vector2(24f, -18f);
+
+            var screenTag = UIFactory.PlacePixelText("ScreenTag", screen.transform, "STATUS", 1.2f,
+                UIStyle.TextDim, PixelText.Align.Left,
+                new Vector2(0f, 1f), new Vector2(12f, -8f));
+            screenTag.raycastTarget = false;
+
+            _statusText = UIFactory.PlacePixelText("ScreenText", screen.transform, "准备演出", 2f,
+                UIStyle.Ok, PixelText.Align.Left,
+                new Vector2(0f, 0.5f), new Vector2(12f, 0f));
+            _statusText.raycastTarget = false;
+
+            // ---------- 面板上的按钮 ----------
+            var confirm = CreateSquareKey("Confirm", face.transform, "确定", UIStyle.Ok, OnConfirm);
             UIFactory.Place((RectTransform)confirm.transform, new Vector2(0f, 0f),
-                new Vector2(120f, 44f), new Vector2(16f, y));
+                new Vector2(58f, 58f), new Vector2(36f, 26f));
 
-            var cancel = UIFactory.CreatePixelButton("Cancel", _boardRoot.transform, "取消", 1.8f,
-                UIStyle.Grey, UIStyle.Text, OnCancel);
-            UIResource.ApplyFrameOrColor(cancel.image, "UI/btn_cancel", UIStyle.Grey);
+            var cancel = CreateSquareKey("Cancel", face.transform, "取消", UIStyle.Grey, OnCancel);
             UIFactory.Place((RectTransform)cancel.transform, new Vector2(0f, 0f),
-                new Vector2(120f, 44f), new Vector2(150f, y));
+                new Vector2(58f, 58f), new Vector2(116f, 26f));
 
-            var exit = UIFactory.CreatePixelButton("Exit", _boardRoot.transform, "退出", 1.8f,
-                UIStyle.Grey, UIStyle.Text, OnExitBoard);
-            UIResource.ApplyFrameOrColor(exit.image, "UI/btn_cancel", UIStyle.Grey);
+            var play = CreateRoundKey("Play", face.transform, 92, UIStyle.Accent, "演出！", 2.2f, UIStyle.Ink, OnPlay);
+            UIFactory.Place((RectTransform)play.transform, new Vector2(0f, 0f),
+                new Vector2(92f, 92f), new Vector2(310f, 24f));
+
+            var stop = CreateRoundKey("Stop", face.transform, 62, UIStyle.Danger, "停止", 1.7f, UIStyle.Text, OnStop);
+            UIFactory.Place((RectTransform)stop.transform, new Vector2(0f, 0f),
+                new Vector2(62f, 62f), new Vector2(450f, 28f));
+
+            var exit = CreateSquareKey("Exit", face.transform, "退出", UIStyle.Grey, OnExitBoard);
             UIFactory.Place((RectTransform)exit.transform, new Vector2(1f, 0f),
-                new Vector2(120f, 44f), new Vector2(-(RosterSidebar.PanelWidth + 16f), y));
+                new Vector2(52f, 92f), new Vector2(-36f, 22f));
 
-            // 主操作：56 高，垂直居中
-            float y2 = (BottomBarHeight - 56f) * 0.5f;
-            var play = UIFactory.CreatePixelButton("Play", _boardRoot.transform, "演出！", 2.4f,
-                UIStyle.Accent, UIStyle.Ink, OnPlay);
-            UIResource.ApplyFrameOrColor(play.image, "UI/btn_play", UIStyle.Accent);
-            UIFactory.Place((RectTransform)play.transform, new Vector2(0.5f, 0f),
-                new Vector2(240f, 56f), new Vector2(-170f, y2));
+            // ---------- 装饰：旋钮 / 滑杆 / LED / 螺丝 ----------
+            for (int i = 0; i < 3; i++)
+            {
+                var knob = UIFactory.CreatePanel("Knob_" + i, face.transform, UIStyle.Grey);
+                knob.raycastTarget = false;
+                knob.sprite = MakeCircleSprite(30, UIStyle.Grey, UIStyle.EdgeDeep);
+                UIFactory.Place((RectTransform)knob.transform, new Vector2(0f, 0f),
+                    new Vector2(30f, 30f), new Vector2(640f + i * 52f, 26f));
 
-            var stop = UIFactory.CreatePixelButton("Stop", _boardRoot.transform, "停止", 2.4f,
-                UIStyle.Danger, UIStyle.Text, OnStop);
-            UIResource.ApplyFrameOrColor(stop.image, "UI/btn_cancel", UIStyle.Danger);
-            UIFactory.Place((RectTransform)stop.transform, new Vector2(0.5f, 0f),
-                new Vector2(120f, 56f), new Vector2(80f, y2));
+                var dot = UIFactory.CreatePanel("KnobDot_" + i, face.transform, UIStyle.Text);
+                dot.raycastTarget = false;
+                UIFactory.Place((RectTransform)dot.transform, new Vector2(0f, 0f),
+                    new Vector2(4f, 10f), new Vector2(640f + i * 52f, 36f));
+            }
+
+            // 滑杆装饰（音量推子的样子）
+            var groove = UIFactory.CreatePanel("FaderGroove", face.transform,
+                new Color(0f, 0f, 0f, 0.35f));
+            groove.raycastTarget = false;
+            UIFactory.Place((RectTransform)groove.transform, new Vector2(0f, 0f),
+                new Vector2(220f, 8f), new Vector2(900f, 128f));
+            var faderFill = UIFactory.CreatePanel("FaderFill", face.transform, UIStyle.Accent2);
+            faderFill.raycastTarget = false;
+            UIFactory.Place((RectTransform)faderFill.transform, new Vector2(0f, 0f),
+                new Vector2(140f, 8f), new Vector2(860f, 128f));
+            var faderCap = UIFactory.CreatePanel("FaderCap", face.transform, UIStyle.Text);
+            faderCap.raycastTarget = false;
+            UIFactory.Place((RectTransform)faderCap.transform, new Vector2(0f, 0f),
+                new Vector2(18f, 28f), new Vector2(940f, 128f));
+
+            // LED 灯条（右上角）
+            Color[] leds = { UIStyle.Ok, UIStyle.Accent, UIStyle.Danger, UIStyle.Accent2 };
+            for (int i = 0; i < leds.Length; i++)
+            {
+                var led = UIFactory.CreatePanel("Led_" + i, face.transform, leds[i]);
+                led.raycastTarget = false;
+                UIFactory.Place((RectTransform)led.transform, new Vector2(1f, 1f),
+                    new Vector2(14f, 14f), new Vector2(-40f - i * 26f, -30f));
+            }
+
+            // 四角螺丝
+            foreach (var corner in new[] { new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, 1f), new Vector2(1f, 1f) })
+            {
+                var screw = UIFactory.CreatePanel("Screw", plate.transform, UIStyle.EdgeDeep);
+                screw.raycastTarget = false;
+                UIFactory.Place((RectTransform)screw.transform, corner,
+                    new Vector2(10f, 10f),
+                    new Vector2(corner.x > 0.5f ? -9f : 9f, corner.y > 0.5f ? -9f : 9f));
+            }
+        }
+
+        /// <summary>面板上的方形按键。</summary>
+        private static Button CreateSquareKey(string name, Transform parent, string label,
+                                              Color face, System.Action onClick)
+        {
+            var btn = UIFactory.CreatePixelButton(name, parent, label, 1.6f, face, UIStyle.Ink, onClick);
+            UIResource.ApplyFrameOrColor(btn.image, "UI/btn_confirm", face);
+            return btn;
+        }
+
+        /// <summary>面板上的圆形按键（形状各异的「机器按钮」）。</summary>
+        private static Button CreateRoundKey(string name, Transform parent, int diameter, Color face,
+                                             string label, float labelScale, Color labelColor,
+                                             System.Action onClick)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
+            go.transform.SetParent(parent, false);
+            var img = go.GetComponent<Image>();
+            img.sprite = MakeCircleSprite(diameter, face, UIStyle.EdgeDeep);
+            var btn = go.GetComponent<Button>();
+            btn.targetGraphic = img;
+            btn.onClick.AddListener(new UnityEngine.Events.UnityAction(onClick));
+            var rt = (RectTransform)go.transform;
+            rt.sizeDelta = new Vector2(diameter, diameter);
+
+            var lab = UIFactory.PlacePixelText("Label", go.transform, label, labelScale,
+                labelColor, PixelText.Align.Center,
+                new Vector2(0.5f, 0.5f), Vector2.zero);
+            lab.raycastTarget = false;
+            return btn;
+        }
+
+        /// <summary>程序化画一个实心圆（带一圈深色描边），做圆形按钮和旋钮。</summary>
+        private static Sprite MakeCircleSprite(int diameter, Color color, Color ring)
+        {
+            var tex = new Texture2D(diameter, diameter, TextureFormat.RGBA32, false);
+            tex.filterMode = FilterMode.Point;
+            float r = diameter * 0.5f;
+            var px = new Color[diameter * diameter];
+            for (int y = 0; y < diameter; y++)
+            {
+                for (int x = 0; x < diameter; x++)
+                {
+                    float dx = x + 0.5f - r;
+                    float dy = y + 0.5f - r;
+                    float d2 = dx * dx + dy * dy;
+                    if (d2 <= r * r) px[y * diameter + x] = color;
+                    else if (d2 <= (r + 1.05f) * (r + 1.05f)) px[y * diameter + x] = ring;
+                    else px[y * diameter + x] = Color.clear;
+                }
+            }
+            tex.SetPixels(px);
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0f, 0f, diameter, diameter),
+                                 new Vector2(0.5f, 0.5f), diameter);
         }
 
         private void OnPlay()

@@ -12,16 +12,18 @@ namespace WaveTeam.UI
     {
         public readonly DrumCharacter Character;
         public float StartBeat;
+        public int Track;                                 // 所在音轨（0..3，0 在最下面一排）
         public readonly float DurationBeats; // 时值（拍）：该角色节奏型占的跨度
         public readonly RectTransform Rect;
         public readonly HexWaveformRenderer Waveform; // 视觉 = 六边形 blob（无框）
         public bool ConnectedToNext;                  // 是否与紧随其后的鼓「已连接」（接缝标记）
         public GameObject SeamNode;                   // 接缝处的连接点按钮（待连接时显示）
 
-        public PlacedDrum(DrumCharacter character, float startBeat, float durationBeats, RectTransform rect, HexWaveformRenderer waveform)
+        public PlacedDrum(DrumCharacter character, float startBeat, int track, float durationBeats, RectTransform rect, HexWaveformRenderer waveform)
         {
             Character = character;
             StartBeat = startBeat;
+            Track = track;
             DurationBeats = durationBeats;
             Rect = rect;
             Waveform = waveform;
@@ -39,7 +41,16 @@ namespace WaveTeam.UI
         public const float DefaultPixelsPerBeat = 120f; // 1 拍 = 120px（16 拍 ≈ 一屏），板子只做整体效果演示，微调进细节面板
         public const float SnapBeat = 1f;               // 吸附到整格（整数拍），不再 0.5 拍
         public const float TrackLengthBeats = 16f;
-        public const float TrackHeight = 160f;
+        public const int TrackCount = 4;                 // 四条音轨上下并排
+        public const float TrackHeight = 150f;           // 单条音轨的高度
+        public const float TrackGap = 14f;               // 轨与轨之间的间距
+
+        /// <summary>四条轨整体占的高度（居中参考值）。</summary>
+        public const float TrackBlockHalf =
+            (TrackCount * TrackHeight + (TrackCount - 1) * TrackGap) * 0.5f;
+
+        /// <summary>整块音轨相对板子中心的偏移（向上抬一点，和底部调音台留出距离）。</summary>
+        public const float TrackCenterOffset = 24f;
 
         public const float MinPixelsPerBeat = 20f;
         public const float MaxPixelsPerBeat = 600f;
@@ -68,6 +79,25 @@ namespace WaveTeam.UI
 
         public IReadOnlyList<PlacedDrum> Placed { get { return _placed; } }
         public RectTransform Rect { get { return (RectTransform)transform; } }
+
+        /// <summary>第 track 条轨的竖向中心（0 号轨在最下面，3 号在最上面）。</summary>
+        public static float TrackRowY(int track)
+        {
+            return TrackCenterOffset - TrackBlockHalf + (TrackHeight + TrackGap) * (track + 0.5f);
+        }
+
+        /// <summary>板内坐标 y → 最近的一条轨（永远返回 0..TrackCount-1）。</summary>
+        public static int TrackFromLocalY(float localY)
+        {
+            int best = 0;
+            float bestD = float.MaxValue;
+            for (int t = 0; t < TrackCount; t++)
+            {
+                float d = Mathf.Abs(localY - TrackRowY(t));
+                if (d < bestD) { bestD = d; best = t; }
+            }
+            return best;
+        }
 
         public static DrumTrackBoard Create(Transform parent)
         {
@@ -135,27 +165,38 @@ namespace WaveTeam.UI
                 16f,
                 new Color(1f, 1f, 1f, 0.025f)
             );
-            // 水平轨线
-            var lane = UIFactory.CreatePanel("LaneLine", root, new Color(1f, 1f, 1f, 0.08f));
-            lane.raycastTarget = false;
-            var laneRt = lane.rectTransform;
-            laneRt.anchorMin = new Vector2(0f, 0.5f);
-            laneRt.anchorMax = new Vector2(1f, 0.5f);
-            laneRt.offsetMin = new Vector2(0f, -1f);
-            laneRt.offsetMax = new Vector2(0f, 1f);
-
-            // 格槽：16 个凹槽，交替底色，做出「刻进木头里的槽」的观感
-            for (int b = 0; b < (int)TrackLengthBeats; b++)
+            // 四条音轨上下并排：每条轨一条基线 + 16 个格槽 + 左侧轨名
+            for (int t = 0; t < TrackCount; t++)
             {
-                var slotColor = b % 2 == 0 ? UIStyle.Cell : UIStyle.CellAlt;
-                var slot = UIFactory.CreatePanel("Slot_" + b, root, slotColor);
-                slot.raycastTarget = false;
-                UIResource.ApplyWellOrColor(slot, "UI/cell_slot", slotColor);
-                var srt = slot.rectTransform;
-                srt.anchorMin = srt.anchorMax = srt.pivot = new Vector2(0f, 0.5f);
-                srt.anchoredPosition = new Vector2(_space.ToX(b) + SlotGap * 0.5f, 0f);
-                srt.sizeDelta = new Vector2(_space.SpanToWidth(1f) - SlotGap, TrackHeight - 8f);
-                _slots.Add(srt);
+                float ry = TrackRowY(t);
+
+                var lane = UIFactory.CreatePanel("LaneLine_" + t, root, new Color(1f, 1f, 1f, 0.08f));
+                lane.raycastTarget = false;
+                var laneRt = lane.rectTransform;
+                laneRt.anchorMin = new Vector2(0f, 0.5f);
+                laneRt.anchorMax = new Vector2(1f, 0.5f);
+                laneRt.anchoredPosition = new Vector2(0f, ry);
+                laneRt.sizeDelta = new Vector2(0f, TrackHeight + 2f);
+
+                var name = PixelText.Create("TrackName_" + t, root, "音轨 " + (TrackCount - t),
+                                            1.5f, UIStyle.Text, PixelText.Align.Center);
+                name.raycastTarget = false;
+                var nrt = (RectTransform)name.transform;
+                nrt.anchorMin = nrt.anchorMax = nrt.pivot = new Vector2(0f, 0.5f);
+                nrt.anchoredPosition = new Vector2(LeftMargin * 0.5f, ry);
+
+                for (int b = 0; b < (int)TrackLengthBeats; b++)
+                {
+                    var slotColor = b % 2 == 0 ? UIStyle.Cell : UIStyle.CellAlt;
+                    var slot = UIFactory.CreatePanel("Slot_" + t + "_" + b, root, slotColor);
+                    slot.raycastTarget = false;
+                    UIResource.ApplyWellOrColor(slot, "UI/cell_slot", slotColor);
+                    var srt = slot.rectTransform;
+                    srt.anchorMin = srt.anchorMax = srt.pivot = new Vector2(0f, 0.5f);
+                    srt.anchoredPosition = new Vector2(_space.ToX(b) + SlotGap * 0.5f, ry);
+                    srt.sizeDelta = new Vector2(_space.SpanToWidth(1f) - SlotGap, TrackHeight - 8f);
+                    _slots.Add(srt);
+                }
             }
 
             // 拍线（每 4 拍加粗提亮为小节线）
@@ -167,8 +208,8 @@ namespace WaveTeam.UI
                 line.raycastTarget = false;
                 var rt = line.rectTransform;
                 rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 0.5f);
-                rt.anchoredPosition = new Vector2(_space.ToX(b), 0f);
-                rt.sizeDelta = new Vector2(bar ? 2f : 1f, TrackHeight + 40f);
+                rt.anchoredPosition = new Vector2(_space.ToX(b), TrackCenterOffset);
+                rt.sizeDelta = new Vector2(bar ? 2f : 1f, TrackBlockHalf * 2f + 40f);
                 _beatLines.Add(rt);
                 _beatLineBeats.Add(b);
             }
@@ -194,7 +235,7 @@ namespace WaveTeam.UI
                 new Vector2(0.5f, 0.5f);
 
             timeRt.anchoredPosition =
-                new Vector2(0f, TrackHeight * 0.5f + 75f);
+                new Vector2(0f, TrackCenterOffset + TrackBlockHalf + 55f);
         }
         private void CreateSectionLabel(
     Transform root,
@@ -224,7 +265,7 @@ namespace WaveTeam.UI
 
             rt.anchoredPosition = new Vector2(
                 _space.ToX(centerBeat),
-                TrackHeight * 0.5f + 30f
+                TrackCenterOffset + TrackBlockHalf + 24f
             );
 
             rt.sizeDelta = new Vector2(
@@ -263,12 +304,12 @@ namespace WaveTeam.UI
 
             rt.anchoredPosition = new Vector2(
                 _space.ToX(centerBeat),
-                0f
+                TrackCenterOffset
             );
 
             rt.sizeDelta = new Vector2(
                 _space.SpanToWidth(span),
-                TrackHeight + 20f
+                TrackBlockHalf * 2f
             );
 
             rt.SetAsFirstSibling();
@@ -437,20 +478,31 @@ namespace WaveTeam.UI
             return Snap(_space.ToBeat(localX));
         }
 
-        /// <summary>能否在该拍放置（同轨不重叠）。</summary>
-        public bool CanPlace(DrumCharacter character, float startBeat)
+        /// <summary>屏幕坐标 → 最近的一条轨（0..TrackCount-1）。</summary>
+        public int ScreenToTrack(Vector2 screenPos)
         {
-            return CanPlace(character, startBeat, null);
+            Vector2 local;
+            if (_canvas != null && RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                    Rect, screenPos, _canvas.worldCamera, out local))
+                return TrackFromLocalY(local.y);
+            return 0;
+        }
+
+        /// <summary>能否在该拍放置（同轨不重叠）。</summary>
+        public bool CanPlace(DrumCharacter character, float startBeat, int track)
+        {
+            return CanPlace(character, startBeat, track, null);
         }
 
         /// <summary>同上，但移动时可把正在移动的鼓排除在重叠判定外。</summary>
-        public bool CanPlace(DrumCharacter character, float startBeat, PlacedDrum except)
+        public bool CanPlace(DrumCharacter character, float startBeat, int track, PlacedDrum except)
         {
             // 按拍区间判重叠：角色占 [startBeat, startBeat+时值) 一段，区间相交即冲突
             float dur = character.Pattern.TotalBeats;
             foreach (var p in _placed)
             {
                 if (p == except) continue;
+                if (p.Track != track) continue;              // 只有同一条轨才算重叠
                 if (startBeat < p.StartBeat + p.DurationBeats && startBeat + dur > p.StartBeat) return false;
             }
             return true;
@@ -467,9 +519,10 @@ namespace WaveTeam.UI
         /// 落点预览和真正落位都走这一份逻辑，从根上杜绝「预览显示绿了却放不下去」。
         /// </summary>
         private bool ResolveDrop(DrumCharacter character, Vector2 screenPos,
-                                 out float beat, out bool inLane)
+                                 out float beat, out int track, out bool inLane)
         {
             beat = 0f;
+            track = 0;
             inLane = false;
             if (_canvas == null || character == null) return false;
 
@@ -477,11 +530,12 @@ namespace WaveTeam.UI
             if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
                     Rect, screenPos, _canvas.worldCamera, out local)) return false;
 
-            inLane = Mathf.Abs(local.y) <= TrackHeight * 0.5f + 20f;   // 需落在轨道竖向范围内
+            track = TrackFromLocalY(local.y);
+            inLane = Mathf.Abs(local.y - TrackCenterOffset) <= TrackBlockHalf + 20f;
             beat = Snap(_space.ToBeat(local.x));
             return inLane
                 && IsValidBeatRange(beat, character.Pattern.TotalBeats)
-                && CanPlace(character, beat);
+                && CanPlace(character, beat, track);
         }
 
         /// <summary>卡片拖放落点 → 放置；成功返回 true（卡片回侧栏可复用）。</summary>
@@ -489,9 +543,10 @@ namespace WaveTeam.UI
         {
             if (card == null) return false;
             float beat;
+            int track;
             bool inLane;
-            if (!ResolveDrop(card.Character, screenPos, out beat, out inLane)) return false;
-            return Place(card.Character, beat) != null;
+            if (!ResolveDrop(card.Character, screenPos, out beat, out track, out inLane)) return false;
+            return Place(card.Character, beat, track) != null;
         }
 
         // ---------- 拖拽落点预览 ----------
@@ -505,6 +560,7 @@ namespace WaveTeam.UI
         private HexWaveformRenderer _ghost;
         private PixelText _ghostLabel;
         private float _ghostBeat;
+        private int _ghostTrack;
         private float _ghostBeats = 1f;
 
         /// <summary>拖拽中每帧刷新落点虚影：绿=能放，红=不能放（重叠 / 越界 / 超出 16 拍）。</summary>
@@ -518,8 +574,9 @@ namespace WaveTeam.UI
             if (IsDropBlocked != null && IsDropBlocked(screenPos)) { SetGhostVisible(false); return; }
 
             float beat;
+            int track;
             bool inLane;
-            bool ok = ResolveDrop(c, screenPos, out beat, out inLane);
+            bool ok = ResolveDrop(c, screenPos, out beat, out track, out inLane);
 
             // 拖回侧栏（不在轨道竖向范围内）时干脆不显示，免得跟一个红块乱跑
             if (!inLane) { SetGhostVisible(false); return; }
@@ -528,10 +585,12 @@ namespace WaveTeam.UI
             SetGhostVisible(true);
 
             _ghostBeat = beat;
+            _ghostTrack = track;
             _ghostBeats = c.Pattern.TotalBeats;
             _ghost.color = ok ? GhostOk : GhostBad;
             PlaceGhost();
-            if (_ghostLabel != null) _ghostLabel.Text = "拍 " + Mathf.RoundToInt(beat);
+            if (_ghostLabel != null)
+                _ghostLabel.Text = "音轨 " + (TrackCount - track) + " · 拍 " + Mathf.RoundToInt(beat);
         }
 
         /// <summary>松手 / 落位失败后收起虚影。</summary>
@@ -576,7 +635,7 @@ namespace WaveTeam.UI
         {
             if (_ghost == null) return;
             var rt = (RectTransform)_ghost.transform;
-            rt.anchoredPosition = new Vector2(_space.ToX(_ghostBeat), 0f);
+            rt.anchoredPosition = new Vector2(_space.ToX(_ghostBeat), TrackRowY(_ghostTrack));
             rt.sizeDelta = new Vector2(_space.SpanToWidth(_ghostBeats), TrackHeight);
             _ghost.SetPitch(_space.PixelsPerBeat / RhythmPattern.HexPerBeat);
         }
@@ -614,43 +673,46 @@ namespace WaveTeam.UI
         }
 
         /// <summary>移动校验 + 重定位；失败返回 false（保持原位）。</summary>
-        public bool TryMove(PlacedDrum pd, float newBeat)
+        public bool TryMove(PlacedDrum pd, float newBeat, int newTrack)
         {
             if (!IsValidBeatRange(newBeat, pd.DurationBeats)) return false;
-            if (!CanPlace(pd.Character, newBeat, pd)) return false;
-            _undo.Push(new UndoAction { Type = UndoType.Move, Drum = pd, OldBeat = pd.StartBeat });
-            MoveTo(pd, newBeat);
+            if (!CanPlace(pd.Character, newBeat, newTrack, pd)) return false;
+            _undo.Push(new UndoAction { Type = UndoType.Move, Drum = pd,
+                                        OldBeat = pd.StartBeat, OldTrack = pd.Track });
+            MoveTo(pd, newBeat, newTrack);
             return true;
         }
 
         /// <summary>放置（校验通过才生效，记录撤销），返回新放置的鼓或 null。</summary>
-        public PlacedDrum Place(DrumCharacter character, float startBeat)
+        public PlacedDrum Place(DrumCharacter character, float startBeat, int track)
         {
-            if (!CanPlace(character, startBeat)) return null;
-            var pd = PlaceInternal(character, startBeat);
+            if (!CanPlace(character, startBeat, track)) return null;
+            var pd = PlaceInternal(character, startBeat, track);
             _undo.Push(new UndoAction { Type = UndoType.Place, Drum = pd });
             return pd;
         }
 
-        private PlacedDrum PlaceInternal(DrumCharacter character, float startBeat)
+        private PlacedDrum PlaceInternal(DrumCharacter character, float startBeat, int track)
         {
-            var pd = CreatePlaced(character, startBeat);
+            var pd = CreatePlaced(character, startBeat, track);
             _placed.Add(pd);
             RefreshConnections();
             return pd;
         }
 
         /// <summary>移动（裸重定位，重叠校验由交互层在移动前判断）。</summary>
-        public void MoveTo(PlacedDrum pd, float newBeat)
+        public void MoveTo(PlacedDrum pd, float newBeat, int newTrack)
         {
             pd.StartBeat = newBeat;
-            pd.Rect.anchoredPosition = new Vector2(_space.ToX(newBeat), pd.Rect.anchoredPosition.y);
+            pd.Track = newTrack;
+            pd.Rect.anchoredPosition = new Vector2(_space.ToX(newBeat), TrackRowY(newTrack));
             RefreshConnections();
         }
 
         public void Remove(PlacedDrum pd)
         {
-            _undo.Push(new UndoAction { Type = UndoType.Remove, Character = pd.Character, OldBeat = pd.StartBeat });
+            _undo.Push(new UndoAction { Type = UndoType.Remove, Character = pd.Character,
+                                        OldBeat = pd.StartBeat, OldTrack = pd.Track });
             RemoveInternal(pd);
         }
 
@@ -663,55 +725,62 @@ namespace WaveTeam.UI
         /// <summary>刷新相邻鼓的「尾巴待连接」状态：某鼓后面紧跟了不同角色 → 其尾巴画暗（未连接）；没接/接自己 → 原样。</summary>
         private void RefreshConnections()
         {
-            var sorted = new List<PlacedDrum>(_placed);
-            sorted.Sort((a, b) => a.StartBeat.CompareTo(b.StartBeat));
-            for (int i = 0; i < sorted.Count; i++)
+            // 连接/融合只发生在同一条轨内：按轨分组，再在组内按拍排序
+            for (int t = 0; t < TrackCount; t++)
             {
-                var cur = sorted[i];
-                bool pending = false;
-                List<HexCoord> bridge = null;
-                Color fuseColor = Color.white; // 融合色（前后角色颜色混合），已连接时给尾巴/桥用
-                if (i + 1 < sorted.Count)
+                var sorted = new List<PlacedDrum>();
+                foreach (var p in _placed)
+                    if (p.Track == t) sorted.Add(p);
+                sorted.Sort((a, b) => a.StartBeat.CompareTo(b.StartBeat));
+
+                for (int i = 0; i < sorted.Count; i++)
                 {
-                    var next = sorted[i + 1];
-                    bool contiguous = Mathf.Abs(next.StartBeat - (cur.StartBeat + cur.DurationBeats)) < 1e-3f;
-                    bool different = next.Character.Name != cur.Character.Name;
-                    pending = contiguous && different;
-                    fuseColor = Color.Lerp(cur.Waveform.color, next.Waveform.color, 0.5f);
-                    if (pending)
+                    var cur = sorted[i];
+                    bool pending = false;
+                    List<HexCoord> bridge = null;
+                    Color fuseColor = Color.white; // 融合色（前后角色颜色混合），已连接时给尾巴/桥用
+                    if (i + 1 < sorted.Count)
                     {
-                        // 端点错位（纵向高度不同）→ 在接缝处补一段垂直的桥，把前后连上
-                        int la = cur.Character.Level;
-                        int lb = next.Character.Level;
-                        int d = lb - la;
-                        if (Mathf.Abs(d) >= 2)
+                        var next = sorted[i + 1];
+                        bool contiguous = Mathf.Abs(next.StartBeat - (cur.StartBeat + cur.DurationBeats)) < 1e-3f;
+                        bool different = next.Character.Name != cur.Character.Name;
+                        pending = contiguous && different;
+                        fuseColor = Color.Lerp(cur.Waveform.color, next.Waveform.color, 0.5f);
+                        if (pending)
                         {
-                            int seamQ = Mathf.RoundToInt(RhythmPattern.HexPerBeat * cur.DurationBeats);
-                            int step = d > 0 ? 1 : -1;
-                            bridge = new List<HexCoord>();
-                            for (int r = la + step; r != lb; r += step)
-                                bridge.Add(new HexCoord(seamQ, r));
+                            // 端点错位（纵向高度不同）→ 在接缝处补一段垂直的桥，把前后连上
+                            int la = cur.Character.Level;
+                            int lb = next.Character.Level;
+                            int d = lb - la;
+                            if (Mathf.Abs(d) >= 2)
+                            {
+                                int seamQ = Mathf.RoundToInt(RhythmPattern.HexPerBeat * cur.DurationBeats);
+                                int step = d > 0 ? 1 : -1;
+                                bridge = new List<HexCoord>();
+                                for (int r = la + step; r != lb; r += step)
+                                    bridge.Add(new HexCoord(seamQ, r));
+                            }
                         }
                     }
-                }
 
-                if (!pending) cur.ConnectedToNext = false; // 不再接别人，连接标记作废
-                cur.Waveform.SetTailPending(pending && !cur.ConnectedToNext);
-                cur.Waveform.SetBridge(bridge, cur.ConnectedToNext);
-                cur.Waveform.SetTailFused(pending && cur.ConnectedToNext, fuseColor); // 已连接 → 尾巴/桥融合色
+                    if (!pending) cur.ConnectedToNext = false; // 不再接别人，连接标记作废
+                    cur.Waveform.SetTailPending(pending && !cur.ConnectedToNext);
+                    cur.Waveform.SetBridge(bridge, cur.ConnectedToNext);
+                    cur.Waveform.SetTailFused(pending && cur.ConnectedToNext, fuseColor); // 已连接 → 尾巴/桥融合色
 
-                if (pending)
-                {
-                    if (cur.SeamNode == null) cur.SeamNode = CreateSeamNode(cur);
-                    var img = cur.SeamNode.GetComponent<Image>();
-                    if (img != null) img.color = cur.ConnectedToNext
-                        ? new Color(0.46f, 0.86f, 0.56f, 0.95f)   // 绿：已连接
-                        : new Color(1f, 0.82f, 0.35f, 0.95f);      // 金黄：待连接
-                }
-                else if (cur.SeamNode != null)
-                {
-                    Object.Destroy(cur.SeamNode);
-                    cur.SeamNode = null;
+                    if (pending)
+                    {
+                        if (cur.SeamNode == null) cur.SeamNode = CreateSeamNode(cur);
+                        var img = cur.SeamNode.GetComponent<Image>();
+                        if (img != null) img.color = cur.ConnectedToNext
+                            ? new Color(0.46f, 0.86f, 0.56f, 0.95f)   // 绿：已连接
+                            : new Color(1f, 0.82f, 0.35f, 0.95f);      // 金黄：待连接
+                    }
+                    else if (cur.SeamNode != null)
+                    {
+                        Object.Destroy(cur.SeamNode);
+                        cur.SeamNode = null;
+                    }
                 }
             }
         }
@@ -763,8 +832,8 @@ namespace WaveTeam.UI
             switch (a.Type)
             {
                 case UndoType.Place: RemoveInternal(a.Drum); break;
-                case UndoType.Remove: PlaceInternal(a.Character, a.OldBeat); break;
-                case UndoType.Move: MoveTo(a.Drum, a.OldBeat); break;
+                case UndoType.Remove: PlaceInternal(a.Character, a.OldBeat, a.OldTrack); break;
+                case UndoType.Move: MoveTo(a.Drum, a.OldBeat, a.OldTrack); break;
             }
         }
 
@@ -774,7 +843,12 @@ namespace WaveTeam.UI
             var data = new BoardSaveData();
             data.trackLengthBeats = (int)TrackLengthBeats;
             foreach (var p in _placed)
-                data.drums.Add(new PlacedDrumEntry { waveformType = p.Character.Waveform.Type.ToString(), startBeat = p.StartBeat });
+                data.drums.Add(new PlacedDrumEntry
+                {
+                    waveformType = p.Character.Waveform.Type.ToString(),
+                    startBeat = p.StartBeat,
+                    track = p.Track
+                });
             return data;
         }
 
@@ -786,16 +860,17 @@ namespace WaveTeam.UI
             public PlacedDrum Drum;         // Place / Move
             public DrumCharacter Character; // Remove
             public float OldBeat;           // Move 旧拍 / Remove 原位
+            public int OldTrack;            // Move 旧轨 / Remove 原轨
         }
 
-        private PlacedDrum CreatePlaced(DrumCharacter character, float startBeat)
+        private PlacedDrum CreatePlaced(DrumCharacter character, float startBeat, int track)
         {
             // 程序层面是一「方块」（rect 占 [startBeat, startBeat+时值)），玩家看到的只是这个方块里的一坨六边形 blob，无外框
             var go = new GameObject("Drum_" + character.Name, typeof(RectTransform), typeof(CanvasRenderer), typeof(HexWaveformRenderer));
             go.transform.SetParent(_drumRoot, false);
             var rt = (RectTransform)go.transform;
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 0.5f);
-            rt.anchoredPosition = new Vector2(_space.ToX(startBeat), 0f);
+            rt.anchoredPosition = new Vector2(_space.ToX(startBeat), TrackRowY(track));
             rt.sizeDelta = new Vector2(_space.SpanToWidth(character.Pattern.TotalBeats), TrackHeight);
 
             var wr = go.GetComponent<HexWaveformRenderer>();
@@ -806,7 +881,7 @@ namespace WaveTeam.UI
             wr.SetCategory(character.Category);           // 六边形外观 = 音色大类贴图（同色系边缘设计）
             wr.raycastTarget = true;                     // 可点击 → 双击打开细节预览（加点/洗点）
 
-            var pd = new PlacedDrum(character, startBeat, character.Pattern.TotalBeats, rt, wr);
+            var pd = new PlacedDrum(character, startBeat, track, character.Pattern.TotalBeats, rt, wr);
             PlacedDrumHandle.Attach(go, this, pd);
             return pd;
         }

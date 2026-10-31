@@ -66,9 +66,10 @@ namespace WaveTeam.UI
             _placed.Rect.pivot = _originalPivot;
 
             float beat = _board.ScreenToBeat(e.position);
-            if (!_board.TryMove(_placed, beat))
+            int track = _board.ScreenToTrack(e.position);
+            if (!_board.TryMove(_placed, beat, track))
             {
-                _board.MoveTo(_placed, _placed.StartBeat); // 回原位
+                _board.MoveTo(_placed, _placed.StartBeat, _placed.Track); // 回原位
             }
             _rootCanvas = null;
         }

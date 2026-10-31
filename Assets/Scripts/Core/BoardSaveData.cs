@@ -12,6 +12,7 @@ namespace WaveTeam.Core
     {
         public string waveformType;
         public float startBeat;
+        public int track;
     }
 
     /// <summary>鼓轨编排存档（供 JsonUtility 序列化）。</summary>
