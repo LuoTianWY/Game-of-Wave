@@ -588,14 +588,14 @@ namespace WaveTeam.UI
                 new Color(0f, 0f, 0f, 0.35f));
             vuBack.raycastTarget = false;
             UIFactory.Place((RectTransform)vuBack.transform, new Vector2(0f, 1f),
-                new Vector2(250f, 34f), new Vector2(ClusterX + 692f, -24f));
+                new Vector2(250f, 34f), new Vector2(ClusterX + 762f, -24f));
 
             for (int i = 0; i < vu.Length; i++)
             {
                 var seg = UIFactory.CreatePanel("Vu_" + i, face.transform, vu[i]);
                 seg.raycastTarget = false;
                 UIFactory.Place((RectTransform)seg.transform, new Vector2(0f, 1f),
-                    new Vector2(18f, 22f), new Vector2(ClusterX + 700f + i * 24f, -30f));
+                    new Vector2(18f, 22f), new Vector2(ClusterX + 770f + i * 24f, -30f));
             }
 
             var bpm = UIFactory.CreatePanel("BpmWindow", face.transform,
@@ -603,7 +603,7 @@ namespace WaveTeam.UI
             bpm.raycastTarget = false;
             UIStyle.ApplyWell(bpm, new Color(0.08f, 0.11f, 0.09f, 1f));
             UIFactory.Place((RectTransform)bpm.transform, new Vector2(0f, 1f),
-                new Vector2(242f, 40f), new Vector2(ClusterX + 700f, -64f));
+                new Vector2(242f, 40f), new Vector2(ClusterX + 770f, -64f));
             var bpmText = UIFactory.PlacePixelText("BpmText", bpm.transform, "BPM 120 · 4/4", 1.6f,
                 UIStyle.Accent, PixelText.Align.Left,
                 new Vector2(0f, 0.5f), new Vector2(12f, 0f));
@@ -623,11 +623,11 @@ namespace WaveTeam.UI
             // VU 两侧的 L / R 通道标
             var lText = UIFactory.PlacePixelText("VuL", face.transform, "L", 1.2f,
                 UIStyle.TextDim, PixelText.Align.Left,
-                new Vector2(0f, 1f), new Vector2(ClusterX + 700f, -8f));
+                new Vector2(0f, 1f), new Vector2(ClusterX + 770f, -8f));
             lText.raycastTarget = false;
             var rText = UIFactory.PlacePixelText("VuR", face.transform, "R", 1.2f,
                 UIStyle.TextDim, PixelText.Align.Left,
-                new Vector2(0f, 1f), new Vector2(ClusterX + 932f, -8f));
+                new Vector2(0f, 1f), new Vector2(ClusterX + 1002f, -8f));
             rText.raycastTarget = false;
 
             // ---------- 装饰：两排旋钮 / 竖推子 / 插孔 ----------
