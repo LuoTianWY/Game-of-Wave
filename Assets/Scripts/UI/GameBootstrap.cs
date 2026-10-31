@@ -486,6 +486,7 @@ namespace WaveTeam.UI
         private void BuildBottomBar()
         {
             const float PlatePad = 14f;
+            const float ClusterX = 280f;   // 整组元素在面板里的居中偏移
 
             // 机器底板：优先贴控制台背景图（Assets/Resources/UI/mixer_console.png），
             // 没有图时退回程序化木框。图贴上去后，面板上的按钮/屏幕/旋钮仍由程序绘制，
@@ -538,7 +539,7 @@ namespace WaveTeam.UI
             var srt = (RectTransform)screen.transform;
             srt.anchorMin = srt.anchorMax = srt.pivot = new Vector2(0f, 1f);
             srt.sizeDelta = new Vector2(520f, 84f);
-            srt.anchoredPosition = new Vector2(0f, -18f);
+            srt.anchoredPosition = new Vector2(ClusterX, -18f);
 
             var screenTag = UIFactory.PlacePixelText("ScreenTag", screen.transform, "STATUS", 1.2f,
                 UIStyle.TextDim, PixelText.Align.Left,
@@ -550,37 +551,61 @@ namespace WaveTeam.UI
                 new Vector2(0f, 0.5f), new Vector2(12f, 0f));
             _statusText.raycastTarget = false;
 
+            // 屏幕细节：三条扫描线 + 右上角录制指示灯
+            for (int i = 0; i < 3; i++)
+            {
+                var line = UIFactory.CreatePanel("Scan_" + i, screen.transform,
+                    new Color(1f, 1f, 1f, 0.04f));
+                line.raycastTarget = false;
+                UIFactory.Place((RectTransform)line.transform, new Vector2(0f, 1f),
+                    new Vector2(500f, 1f), new Vector2(10f, -20f - i * 22f));
+            }
+
+            var rec = UIFactory.CreatePanel("Rec", screen.transform, UIStyle.Danger);
+            rec.raycastTarget = false;
+            rec.sprite = MakeCircleSprite(10, UIStyle.Danger, Color.clear);
+            rec.color = Color.white;
+            UIFactory.Place((RectTransform)rec.transform, new Vector2(1f, 1f),
+                new Vector2(10f, 10f), new Vector2(-16f, -12f));
+
             // ---------- 面板上的按钮 ----------
             var confirm = CreateSquareKey("Confirm", face.transform, "确定", UIStyle.Ok, OnConfirm);
             UIFactory.Place((RectTransform)confirm.transform, new Vector2(0f, 0f),
-                new Vector2(58f, 58f), new Vector2(0f, 26f));
+                new Vector2(58f, 58f), new Vector2(ClusterX, 26f));
 
             var cancel = CreateSquareKey("Cancel", face.transform, "取消", UIStyle.Grey, OnCancel);
             UIFactory.Place((RectTransform)cancel.transform, new Vector2(0f, 0f),
-                new Vector2(58f, 58f), new Vector2(70f, 26f));
+                new Vector2(58f, 58f), new Vector2(ClusterX + 70f, 26f));
 
-            var play = CreateRoundKey("Play", face.transform, 92, UIStyle.Accent, "演出！", 2.2f, UIStyle.Ink, OnPlay);
+            var play = CreateRoundKey("Play", face.transform, 96, UIStyle.Accent, "演出！", 1.6f, UIStyle.Ink, OnPlay);
             UIFactory.Place((RectTransform)play.transform, new Vector2(0f, 0f),
-                new Vector2(92f, 92f), new Vector2(310f, 24f));
+                new Vector2(96f, 96f), new Vector2(ClusterX + 300f, 24f));
 
             var stop = CreateRoundKey("Stop", face.transform, 62, UIStyle.Danger, "停止", 1.7f, UIStyle.Text, OnStop);
             UIFactory.Place((RectTransform)stop.transform, new Vector2(0f, 0f),
-                new Vector2(62f, 62f), new Vector2(450f, 28f));
+                new Vector2(62f, 62f), new Vector2(ClusterX + 440f, 28f));
 
             var exit = CreateSquareKey("Exit", face.transform, "退出", UIStyle.Grey, OnExitBoard);
             UIFactory.Place((RectTransform)exit.transform, new Vector2(0f, 0f),
-                new Vector2(52f, 92f), new Vector2(960f, 22f));
+                new Vector2(52f, 92f), new Vector2(ClusterX + 960f, 22f));
 
             // ---------- 屏幕旁：VU 电平表 + BPM 小窗 ----------
             Color[] vu = { UIStyle.Ok, UIStyle.Ok, UIStyle.Ok, UIStyle.Ok,
                            UIStyle.Accent, UIStyle.Accent, UIStyle.Accent,
                            UIStyle.Danger, UIStyle.Danger, UIStyle.Danger };
+
+            var vuBack = UIFactory.CreatePanel("VuBack", face.transform,
+                new Color(0f, 0f, 0f, 0.35f));
+            vuBack.raycastTarget = false;
+            UIFactory.Place((RectTransform)vuBack.transform, new Vector2(0f, 1f),
+                new Vector2(250f, 34f), new Vector2(ClusterX + 592f, -24f));
+
             for (int i = 0; i < vu.Length; i++)
             {
                 var seg = UIFactory.CreatePanel("Vu_" + i, face.transform, vu[i]);
                 seg.raycastTarget = false;
                 UIFactory.Place((RectTransform)seg.transform, new Vector2(0f, 1f),
-                    new Vector2(18f, 22f), new Vector2(600f + i * 24f, -30f));
+                    new Vector2(18f, 22f), new Vector2(ClusterX + 600f + i * 24f, -30f));
             }
 
             var bpm = UIFactory.CreatePanel("BpmWindow", face.transform,
@@ -588,7 +613,7 @@ namespace WaveTeam.UI
             bpm.raycastTarget = false;
             UIStyle.ApplyWell(bpm, new Color(0.08f, 0.11f, 0.09f, 1f));
             UIFactory.Place((RectTransform)bpm.transform, new Vector2(0f, 1f),
-                new Vector2(242f, 40f), new Vector2(600f, -64f));
+                new Vector2(242f, 40f), new Vector2(ClusterX + 600f, -64f));
             var bpmText = UIFactory.PlacePixelText("BpmText", bpm.transform, "BPM 120 · 4/4", 1.6f,
                 UIStyle.Accent, PixelText.Align.Left,
                 new Vector2(0f, 0.5f), new Vector2(12f, 0f));
@@ -599,8 +624,16 @@ namespace WaveTeam.UI
             {
                 int row = i / 3;
                 int col = i % 3;
-                float kx = 560f + col * 54f;
+                float kx = ClusterX + 560f + col * 54f;
                 float ky = row == 0 ? 104f : 32f;
+
+                var basePlate = UIFactory.CreatePanel("KnobBase_" + i, face.transform,
+                    new Color(0f, 0f, 0f, 0.30f));
+                basePlate.raycastTarget = false;
+                basePlate.sprite = MakeCircleSprite(40, new Color(0f, 0f, 0f, 0.30f), Color.clear);
+                basePlate.color = Color.white;
+                UIFactory.Place((RectTransform)basePlate.transform, new Vector2(0f, 0f),
+                    new Vector2(40f, 40f), new Vector2(kx - 5f, ky - 5f));
 
                 var knob = UIFactory.CreatePanel("Knob_" + i, face.transform, UIStyle.Grey);
                 knob.raycastTarget = false;
@@ -624,15 +657,25 @@ namespace WaveTeam.UI
                 new Color(0f, 0f, 0f, 0.40f));
             groove.raycastTarget = false;
             UIFactory.Place((RectTransform)groove.transform, new Vector2(0f, 0f),
-                new Vector2(10f, 150f), new Vector2(740f, 22f));
+                new Vector2(10f, 150f), new Vector2(ClusterX + 740f, 22f));
             var faderFill = UIFactory.CreatePanel("FaderFill", face.transform, UIStyle.Accent2);
             faderFill.raycastTarget = false;
             UIFactory.Place((RectTransform)faderFill.transform, new Vector2(0f, 0f),
-                new Vector2(10f, 96f), new Vector2(740f, 22f));
+                new Vector2(10f, 96f), new Vector2(ClusterX + 740f, 22f));
             var faderCap = UIFactory.CreatePanel("FaderCap", face.transform, UIStyle.Text);
             faderCap.raycastTarget = false;
             UIFactory.Place((RectTransform)faderCap.transform, new Vector2(0f, 0f),
-                new Vector2(32f, 16f), new Vector2(740f, 118f));
+                new Vector2(32f, 16f), new Vector2(ClusterX + 740f, 118f));
+
+            // 推子左侧的刻度线
+            for (int i = 0; i < 5; i++)
+            {
+                var tick = UIFactory.CreatePanel("FaderTick_" + i, face.transform,
+                    new Color(1f, 1f, 1f, 0.22f));
+                tick.raycastTarget = false;
+                UIFactory.Place((RectTransform)tick.transform, new Vector2(0f, 0f),
+                    new Vector2(8f, 2f), new Vector2(ClusterX + 722f, 30f + i * 32f));
+            }
 
             // 三个插孔（圆形的输入口）
             for (int i = 0; i < 3; i++)
@@ -641,17 +684,23 @@ namespace WaveTeam.UI
                 jack.raycastTarget = false;
                 jack.sprite = MakeCircleSprite(18, UIStyle.EdgeDeep, UIStyle.Grey);
                 UIFactory.Place((RectTransform)jack.transform, new Vector2(0f, 0f),
-                    new Vector2(18f, 18f), new Vector2(820f + i * 30f, 20f));
+                    new Vector2(18f, 18f), new Vector2(ClusterX + 820f + i * 30f, 20f));
             }
 
             // LED 灯条（右上角）
             Color[] leds = { UIStyle.Ok, UIStyle.Accent, UIStyle.Danger, UIStyle.Accent2 };
             for (int i = 0; i < leds.Length; i++)
             {
+                var socket = UIFactory.CreatePanel("LedSocket_" + i, face.transform,
+                    new Color(0f, 0f, 0f, 0.45f));
+                socket.raycastTarget = false;
+                UIFactory.Place((RectTransform)socket.transform, new Vector2(0f, 1f),
+                    new Vector2(18f, 18f), new Vector2(ClusterX - 2f + i * 26f, -108f));
+
                 var led = UIFactory.CreatePanel("Led_" + i, face.transform, leds[i]);
                 led.raycastTarget = false;
                 UIFactory.Place((RectTransform)led.transform, new Vector2(0f, 1f),
-                    new Vector2(14f, 14f), new Vector2(0f + i * 26f, -110f));
+                    new Vector2(14f, 14f), new Vector2(ClusterX + i * 26f, -110f));
             }
 
             // 四角螺丝
@@ -662,7 +711,25 @@ namespace WaveTeam.UI
                 UIFactory.Place((RectTransform)screw.transform, corner,
                     new Vector2(10f, 10f),
                     new Vector2(corner.x > 0.5f ? -13f : 9f, corner.y > 0.5f ? -13f : 9f));
+
+                // 螺丝上一道横槽
+                var slot = UIFactory.CreatePanel("ScrewSlot", screw.transform,
+                    new Color(0f, 0f, 0f, 0.45f));
+                slot.raycastTarget = false;
+                UIFactory.Place((RectTransform)slot.transform, new Vector2(0.5f, 0.5f),
+                    new Vector2(6f, 2f), Vector2.zero);
             }
+
+            // 面板上缘的一道反光，强调机器是有厚度的
+            var topGlow = UIFactory.CreatePanel("TopGlow", plate.transform,
+                new Color(1f, 1f, 1f, 0.10f));
+            topGlow.raycastTarget = false;
+            var tgr = (RectTransform)topGlow.transform;
+            tgr.anchorMin = new Vector2(0f, 1f);
+            tgr.anchorMax = new Vector2(1f, 1f);
+            tgr.pivot = new Vector2(0.5f, 1f);
+            tgr.sizeDelta = new Vector2(-24f, 2f);
+            tgr.anchoredPosition = new Vector2(0f, -8f);
         }
 
         /// <summary>面板上的方形按键。</summary>
@@ -671,7 +738,28 @@ namespace WaveTeam.UI
         {
             var btn = UIFactory.CreatePixelButton(name, parent, label, 1.6f, face, UIStyle.Ink, onClick);
             UIResource.ApplyFrameOrColor(btn.image, "UI/btn_confirm", face);
+            // 上缘高光 + 下缘阴影：让每个键像一块有厚度的亚克力键帽
+            AddInnerEdge(btn.transform, "TopHi", true, 2f, new Color(1f, 1f, 1f, 0.20f));
+            AddInnerEdge(btn.transform, "BottomShade", false, 3f, new Color(0f, 0f, 0f, 0.28f));
             return btn;
+        }
+
+        /// <summary>在按钮内部贴一条贴边的细线（高光或阴影）。</summary>
+        private static void AddInnerEdge(Transform parent, string name, bool top,
+                                         float thickness, Color color)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(parent, false);
+            var img = go.GetComponent<Image>();
+            img.color = color;
+            img.raycastTarget = false;
+
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = new Vector2(0f, top ? 1f : 0f);
+            rt.anchorMax = new Vector2(1f, top ? 1f : 0f);
+            rt.pivot = new Vector2(0.5f, top ? 1f : 0f);
+            rt.sizeDelta = new Vector2(-10f, thickness);
+            rt.anchoredPosition = new Vector2(0f, top ? -3f : 3f);
         }
 
         /// <summary>面板上的圆形按键（形状各异的「机器按钮」）。</summary>
@@ -693,7 +781,58 @@ namespace WaveTeam.UI
                 labelColor, PixelText.Align.Center,
                 new Vector2(0.5f, 0.5f), Vector2.zero);
             lab.raycastTarget = false;
+
+            // 圆键的细节：内圈高光、下缘暗边、左上角一点反光
+            var rim = new GameObject("Rim", typeof(RectTransform), typeof(Image));
+            rim.transform.SetParent(go.transform, false);
+            var rimImg = rim.GetComponent<Image>();
+            rimImg.sprite = MakeRingSprite(diameter - 14, new Color(1f, 1f, 1f, 0.22f), 2f);
+            rimImg.color = Color.white;
+            rimImg.raycastTarget = false;
+            UIFactory.Place((RectTransform)rim.transform, new Vector2(0.5f, 0.5f),
+                new Vector2(diameter - 14, diameter - 14), new Vector2(0f, 2f));
+
+            var shade = new GameObject("Shade", typeof(RectTransform), typeof(Image));
+            shade.transform.SetParent(go.transform, false);
+            var shadeImg = shade.GetComponent<Image>();
+            shadeImg.sprite = MakeRingSprite(diameter, new Color(0f, 0f, 0f, 0.32f), 3f);
+            shadeImg.color = Color.white;
+            shadeImg.raycastTarget = false;
+            UIFactory.Place((RectTransform)shade.transform, new Vector2(0.5f, 0.5f),
+                new Vector2(diameter, diameter), new Vector2(0f, -1f));
+
+            var spec = new GameObject("Spec", typeof(RectTransform), typeof(Image));
+            spec.transform.SetParent(go.transform, false);
+            var specImg = spec.GetComponent<Image>();
+            specImg.sprite = MakeCircleSprite(14, new Color(1f, 1f, 1f, 0.30f), Color.clear);
+            specImg.color = Color.white;
+            specImg.raycastTarget = false;
+            UIFactory.Place((RectTransform)spec.transform, new Vector2(0.5f, 0.5f),
+                new Vector2(14f, 14f), new Vector2(-diameter * 0.16f, diameter * 0.18f));
             return btn;
+        }
+
+        /// <summary>画一个空心圆环（做按钮的高光/暗边）。</summary>
+        private static Sprite MakeRingSprite(int diameter, Color band, float thickness)
+        {
+            var tex = new Texture2D(diameter, diameter, TextureFormat.RGBA32, false);
+            tex.filterMode = FilterMode.Point;
+            float r = diameter * 0.5f;
+            var px = new Color[diameter * diameter];
+            for (int y = 0; y < diameter; y++)
+            {
+                for (int x = 0; x < diameter; x++)
+                {
+                    float dx = x + 0.5f - r;
+                    float dy = y + 0.5f - r;
+                    float d = Mathf.Sqrt(dx * dx + dy * dy);
+                    px[y * diameter + x] = (d <= r && d >= r - thickness) ? band : Color.clear;
+                }
+            }
+            tex.SetPixels(px);
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0f, 0f, diameter, diameter),
+                                 new Vector2(0.5f, 0.5f), diameter);
         }
 
         /// <summary>程序化画一个实心圆（带一圈深色描边），做圆形按钮和旋钮。</summary>
