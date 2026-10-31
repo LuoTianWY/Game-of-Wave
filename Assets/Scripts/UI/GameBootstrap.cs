@@ -619,6 +619,27 @@ namespace WaveTeam.UI
                 new Vector2(0f, 0.5f), new Vector2(12f, 0f));
             bpmText.raycastTarget = false;
 
+            // 屏幕右下的迷你波形条
+            int[] wave = { 10, 18, 26, 14, 30, 20, 12, 24, 16, 22 };
+            for (int i = 0; i < wave.Length; i++)
+            {
+                var bar = UIFactory.CreatePanel("MiniWave_" + i, screen.transform,
+                    i % 2 == 0 ? UIStyle.Accent2 : UIStyle.Ok);
+                bar.raycastTarget = false;
+                UIFactory.Place((RectTransform)bar.transform, new Vector2(0f, 0f),
+                    new Vector2(8f, wave[i]), new Vector2(352f + i * 15f, 10f));
+            }
+
+            // VU 两侧的 L / R 通道标
+            var lText = UIFactory.PlacePixelText("VuL", face.transform, "L", 1.2f,
+                UIStyle.TextDim, PixelText.Align.Left,
+                new Vector2(0f, 1f), new Vector2(ClusterX + 600f, -8f));
+            lText.raycastTarget = false;
+            var rText = UIFactory.PlacePixelText("VuR", face.transform, "R", 1.2f,
+                UIStyle.TextDim, PixelText.Align.Left,
+                new Vector2(0f, 1f), new Vector2(ClusterX + 832f, -8f));
+            rText.raycastTarget = false;
+
             // ---------- 装饰：两排旋钮 / 竖推子 / 插孔 ----------
             for (int i = 0; i < 6; i++)
             {
@@ -685,6 +706,45 @@ namespace WaveTeam.UI
                 jack.sprite = MakeCircleSprite(18, UIStyle.EdgeDeep, UIStyle.Grey);
                 UIFactory.Place((RectTransform)jack.transform, new Vector2(0f, 0f),
                     new Vector2(18f, 18f), new Vector2(ClusterX + 820f + i * 30f, 20f));
+            }
+
+            // 两个拨杆开关 + 电源指示灯
+            for (int i = 0; i < 2; i++)
+            {
+                var swBase = UIFactory.CreatePanel("SwitchBase_" + i, face.transform, UIStyle.Grey);
+                swBase.raycastTarget = false;
+                UIFactory.Place((RectTransform)swBase.transform, new Vector2(0f, 0f),
+                    new Vector2(34f, 14f), new Vector2(ClusterX + 900f, 56f + i * 30f));
+
+                var lever = UIFactory.CreatePanel("SwitchLever_" + i, face.transform, UIStyle.Text);
+                lever.raycastTarget = false;
+                UIFactory.Place((RectTransform)lever.transform, new Vector2(0f, 0f),
+                    new Vector2(8f, 18f), new Vector2(ClusterX + 906f, 60f + i * 30f));
+            }
+
+            var power = UIFactory.CreatePanel("PowerLed", face.transform, UIStyle.Ok);
+            power.raycastTarget = false;
+            power.sprite = MakeCircleSprite(12, UIStyle.Ok, UIStyle.EdgeDeep);
+            power.color = Color.white;
+            UIFactory.Place((RectTransform)power.transform, new Vector2(0f, 0f),
+                new Vector2(12f, 12f), new Vector2(ClusterX + 900f, 116f));
+            var powerText = UIFactory.PlacePixelText("PowerText", face.transform, "PWR", 1.2f,
+                UIStyle.TextDim, PixelText.Align.Left,
+                new Vector2(0f, 0f), new Vector2(ClusterX + 918f, 116f));
+            powerText.raycastTarget = false;
+
+            // 右侧空区的喇叭网孔
+            for (int row = 0; row < 6; row++)
+            {
+                for (int col = 0; col < 7; col++)
+                {
+                    var hole = UIFactory.CreatePanel("Grill_" + row + "_" + col, face.transform,
+                        new Color(0f, 0f, 0f, 0.38f));
+                    hole.raycastTarget = false;
+                    UIFactory.Place((RectTransform)hole.transform, new Vector2(1f, 0f),
+                        new Vector2(8f, 8f),
+                        new Vector2(-250f + col * 18f, 34f + row * 18f));
+                }
             }
 
             // LED 灯条（右上角）

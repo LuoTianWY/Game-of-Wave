@@ -91,6 +91,7 @@ namespace WaveTeam.UI
         {
             int best = 0;
             float bestD = float.MaxValue;
+            Color[] trackTint = { UIStyle.Accent2, UIStyle.Accent, UIStyle.Danger };
             for (int t = 0; t < TrackCount; t++)
             {
                 float d = Mathf.Abs(localY - TrackRowY(t));
@@ -165,7 +166,8 @@ namespace WaveTeam.UI
                 16f,
                 new Color(1f, 1f, 1f, 0.025f)
             );
-            // 四条音轨上下并排：每条轨一条基线 + 16 个格槽 + 左侧轨名
+            // 三条音轨上下并排：每条轨一条基线 + 16 个格槽 + 左侧轨名
+            Color[] trackTint = { UIStyle.Accent2, UIStyle.Accent, UIStyle.Danger };
             for (int t = 0; t < TrackCount; t++)
             {
                 float ry = TrackRowY(t);
@@ -183,7 +185,18 @@ namespace WaveTeam.UI
                 name.raycastTarget = false;
                 var nrt = (RectTransform)name.transform;
                 nrt.anchorMin = nrt.anchorMax = nrt.pivot = new Vector2(0f, 0.5f);
-                nrt.anchoredPosition = new Vector2(LeftMargin * 0.5f, ry);
+                nrt.anchoredPosition = new Vector2(LeftMargin * 0.72f, ry);
+
+                // 轨名上方的小色块（每条轨一个颜色 + 一点高光），一眼分清三条轨
+                var chip = UIFactory.CreatePanel("TrackChip_" + t, root, trackTint[t]);
+                chip.raycastTarget = false;
+                UIFactory.Place((RectTransform)chip.transform, new Vector2(0f, 0.5f),
+                    new Vector2(16f, 16f), new Vector2(10f, ry + 16f));
+                var chipDot = UIFactory.CreatePanel("TrackDot_" + t, root,
+                    new Color(1f, 1f, 1f, 0.55f));
+                chipDot.raycastTarget = false;
+                UIFactory.Place((RectTransform)chipDot.transform, new Vector2(0f, 0.5f),
+                    new Vector2(4f, 4f), new Vector2(16f, ry + 16f));
 
                 for (int b = 0; b < (int)TrackLengthBeats; b++)
                 {
@@ -196,6 +209,34 @@ namespace WaveTeam.UI
                     srt.anchoredPosition = new Vector2(_space.ToX(b) + SlotGap * 0.5f, ry);
                     srt.sizeDelta = new Vector2(_space.SpanToWidth(1f) - SlotGap, TrackHeight - 8f);
                     _slots.Add(srt);
+                }
+            }
+
+            // 顶部节拍标尺：每 4 拍一个数字，每拍一根刻度
+            var ruler = UIFactory.CreatePanel("BeatRuler", root, new Color(0f, 0f, 0f, 0.35f));
+            ruler.raycastTarget = false;
+            var rulerRt = ruler.rectTransform;
+            rulerRt.anchorMin = rulerRt.anchorMax = rulerRt.pivot = new Vector2(0f, 0.5f);
+            rulerRt.anchoredPosition = new Vector2(LeftMargin, TrackCenterOffset + TrackBlockHalf + 34f);
+            rulerRt.sizeDelta = new Vector2(_space.SpanToWidth(TrackLengthBeats), 26f);
+
+            for (int b = 0; b <= (int)TrackLengthBeats; b++)
+            {
+                bool bar = b % 4 == 0;
+                var tick = UIFactory.CreatePanel("RulerTick_" + b, root,
+                    bar ? new Color(1f, 1f, 1f, 0.55f) : new Color(1f, 1f, 1f, 0.20f));
+                tick.raycastTarget = false;
+                UIFactory.Place((RectTransform)tick.transform, new Vector2(0f, 0.5f),
+                    new Vector2(2f, bar ? 12f : 6f),
+                    new Vector2(_space.ToX(b), TrackCenterOffset + TrackBlockHalf + 34f));
+
+                if (bar && b < (int)TrackLengthBeats)
+                {
+                    var num = UIFactory.PlacePixelText("RulerNum_" + b, root, (b + 1).ToString(),
+                        1.3f, UIStyle.TextDim, PixelText.Align.Left,
+                        new Vector2(0f, 0.5f),
+                        new Vector2(_space.ToX(b) + 6f, TrackCenterOffset + TrackBlockHalf + 34f));
+                    num.raycastTarget = false;
                 }
             }
 
@@ -235,7 +276,7 @@ namespace WaveTeam.UI
                 new Vector2(0.5f, 0.5f);
 
             timeRt.anchoredPosition =
-                new Vector2(0f, TrackCenterOffset + TrackBlockHalf + 55f);
+                new Vector2(0f, TrackCenterOffset + TrackBlockHalf + 70f);
         }
         private void CreateSectionLabel(
     Transform root,
@@ -265,7 +306,7 @@ namespace WaveTeam.UI
 
             rt.anchoredPosition = new Vector2(
                 _space.ToX(centerBeat),
-                TrackCenterOffset + TrackBlockHalf + 24f
+                TrackCenterOffset + TrackBlockHalf + 12f
             );
 
             rt.sizeDelta = new Vector2(

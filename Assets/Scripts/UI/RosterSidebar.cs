@@ -61,6 +61,16 @@ namespace WaveTeam.UI
                     new Vector2(corner.x > 0.5f ? -9f : 9f, corner.y > 0.5f ? -9f : 9f));
             }
 
+            // 卡片区左侧的竖向色条（和音轨的薄荷色呼应）
+            var rail = UIFactory.CreatePanel("Rail", transform, UIStyle.Accent2);
+            rail.raycastTarget = false;
+            var railRt = (RectTransform)rail.transform;
+            railRt.anchorMin = new Vector2(0f, 0f);
+            railRt.anchorMax = new Vector2(0f, 1f);
+            railRt.pivot = new Vector2(0f, 0.5f);
+            railRt.sizeDelta = new Vector2(3f, -HeaderHeight - 20f);
+            railRt.anchoredPosition = new Vector2(TabWidth + 6f, -6f);
+
             // 卡片容器（面板左起 TabWidth 处开始摆卡）
             _cardsRoot = new GameObject("Cards", typeof(RectTransform)).transform;
             _cardsRoot.SetParent(transform, false);
@@ -88,6 +98,16 @@ namespace WaveTeam.UI
             led.raycastTarget = false;
             UIFactory.Place((RectTransform)led.transform, new Vector2(1f, 1f),
                             new Vector2(14f, 14f), new Vector2(-30f, -20f));
+
+            // 标题右侧的三颗小状态灯
+            Color[] dots = { UIStyle.Ok, UIStyle.Accent, UIStyle.Danger };
+            for (int i = 0; i < dots.Length; i++)
+            {
+                var dot = UIFactory.CreatePanel("HeadDot_" + i, transform, dots[i]);
+                dot.raycastTarget = false;
+                UIFactory.Place((RectTransform)dot.transform, new Vector2(1f, 1f),
+                                new Vector2(9f, 9f), new Vector2(-78f - i * 14f, -22f));
+            }
 
             var divider = UIFactory.CreatePanel("Divider", transform, UIStyle.Line);
             divider.raycastTarget = false;
