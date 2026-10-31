@@ -95,6 +95,12 @@ namespace WaveTeam.UI
                                                  new Vector2(TabWidth + 16f, -18f));
             title.raycastTarget = false;
 
+            var subtitle = UIFactory.PlacePixelText("Subtitle", transform, "ROSTER", 1.1f,
+                                                   UIStyle.TextDim, PixelText.Align.Left,
+                                                   new Vector2(0f, 1f),
+                                                   new Vector2(TabWidth + 92f, -22f));
+            subtitle.raycastTarget = false;
+
             var led = UIFactory.CreatePanel("HeaderLed", transform, UIStyle.Accent2);
             led.raycastTarget = false;
             UIFactory.Place((RectTransform)led.transform, new Vector2(1f, 1f),
@@ -155,6 +161,7 @@ namespace WaveTeam.UI
         {
             ClearCards();
             float y = -HeaderHeight - 14f;
+            int index = 0;
             foreach (var c in characters)
             {
                 var card = DrumCharacterCard.Create(c, _cardsRoot);
@@ -162,6 +169,13 @@ namespace WaveTeam.UI
                 var rt = card.Rect;
                 rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 1f);
                 rt.anchoredPosition = new Vector2(TabWidth + 12f, y);
+
+                // 卡片左上角的编号（01..06），像设备上的通道号
+                var num = UIFactory.PlacePixelText("Index", rt, (index + 1).ToString("00"),
+                    1.1f, UIStyle.TextDim, PixelText.Align.Left,
+                    new Vector2(0f, 1f), new Vector2(6f, -6f));
+                num.raycastTarget = false;
+                index++;
 
                 // 卡片之间的分隔槽
                 var sep = UIFactory.CreatePanel("CardSep", _cardsRoot, new Color(1f, 1f, 1f, 0.06f));

@@ -299,8 +299,6 @@ namespace WaveTeam.UI
             _board = DrumTrackBoard.Create(_boardRoot.transform);
             _sidebar = RosterSidebar.Create(_boardRoot.transform);
 
-            BuildRehearsalGoalPanel();
-
             var samples = DrumLibrary.Load();
             if (samples.Count == 0)
             {
@@ -320,6 +318,7 @@ namespace WaveTeam.UI
             }
 
             BuildPlayback();
+            BuildRehearsalGoalPanel();   // 目标横幅要压在标题条上方，所以放在 Playback 之后建
 
             if (samples.Count == 0)
                 _statusText.Text = "未找到鼓音色：请把 ogg 放进 Assets/Resources/Audio/drums（见波形映射表.md）";
@@ -349,34 +348,35 @@ namespace WaveTeam.UI
             var rt = panel.rectTransform;
 
             rt.anchorMin = rt.anchorMax = rt.pivot =
-                new Vector2(0f, 1f);
+                new Vector2(0.5f, 1f);
 
-            rt.sizeDelta = new Vector2(560f, 54f);
+            rt.sizeDelta = new Vector2(660f, 66f);
 
             rt.anchoredPosition =
-                new Vector2(16f, -84f);
+                new Vector2(0f, -4f);
 
 
             // 标题（沿用系统字：这几个字的像素字形不全，用系统字不会缺笔画）
             var title = UIFactory.CreateText(
-                "GoalTitle", panel.transform, "本轮排练目标", 18, UIStyle.Accent,
+                "GoalTitle", panel.transform, "本轮排练目标", 16, UIStyle.Accent,
                 TextAnchor.MiddleLeft);
             title.raycastTarget = false;
             var titleRt = (RectTransform)title.transform;
             titleRt.anchorMin = titleRt.anchorMax = titleRt.pivot = new Vector2(0f, 1f);
-            titleRt.sizeDelta = new Vector2(140f, 40f);
-            titleRt.anchoredPosition = new Vector2(14f, -7f);
+            titleRt.sizeDelta = new Vector2(130f, 52f);
+            titleRt.anchoredPosition = new Vector2(14f, -8f);
 
 
             // 目标内容
             var goals = UIFactory.CreateText(
-                "GoalContent", panel.transform, "稳定开场 · 增加层次 · 避免拥挤", 17,
+                "GoalContent", panel.transform,
+                "开场：需要稳定\n发展：增加层次\n整体：避免过度拥挤", 14,
                 UIStyle.Text, TextAnchor.UpperLeft);
             goals.raycastTarget = false;
             var goalsRt = (RectTransform)goals.transform;
             goalsRt.anchorMin = goalsRt.anchorMax = goalsRt.pivot = new Vector2(0f, 1f);
-            goalsRt.sizeDelta = new Vector2(340f, 40f);
-            goalsRt.anchoredPosition = new Vector2(170f, -7f);
+            goalsRt.sizeDelta = new Vector2(480f, 58f);
+            goalsRt.anchoredPosition = new Vector2(150f, -5f);
         }
 
         private void BuildPlayback()
@@ -395,9 +395,9 @@ namespace WaveTeam.UI
 
             // 顶栏提示：状态文字挪到下方调音台的屏幕里了，这里只留操作说明
             var hint = UIFactory.PlacePixelText("Hints", _boardRoot.transform,
-                "把右侧角色拖到鼓轨上（同轨不重叠）· 左键拖动移动 · 右键收回", 1.8f,
-                UIStyle.Text, PixelText.Align.Center,
-                new Vector2(0.5f, 1f), new Vector2(0f, -24f));
+                "拖到鼓轨上 · 左键移动 · 右键收回", 1.5f,
+                UIStyle.Text, PixelText.Align.Left,
+                new Vector2(0f, 1f), new Vector2(20f, -14f));
             hint.raycastTarget = false;
 
             // BGM / 演出播放器跨「进入-退出」复用，避免重复 AddComponent 累积 AudioSource
@@ -709,6 +709,21 @@ namespace WaveTeam.UI
                 new Vector2(0f, 0f), new Vector2(ClusterX + 918f, 116f));
             powerText.raycastTarget = false;
 
+            // 旋钮上方的 LOW/MID/HIGH 标牌 + 推子的 MASTER 标牌
+            string[] knobLabels = { "LOW", "MID", "HIGH" };
+            for (int i = 0; i < knobLabels.Length; i++)
+            {
+                var kl = UIFactory.PlacePixelText("KnobLabel_" + i, face.transform,
+                    knobLabels[i], 1.1f, UIStyle.TextDim, PixelText.Align.Center,
+                    new Vector2(0f, 0f), new Vector2(ClusterX + 575f + i * 54f, 142f));
+                kl.raycastTarget = false;
+            }
+
+            var master = UIFactory.PlacePixelText("MasterLabel", face.transform, "MASTER", 1.1f,
+                UIStyle.TextDim, PixelText.Align.Center,
+                new Vector2(0f, 0f), new Vector2(ClusterX + 740f, 180f));
+            master.raycastTarget = false;
+
             // 右侧空区的喇叭网孔
             for (int row = 0; row < 6; row++)
             {
@@ -721,6 +736,16 @@ namespace WaveTeam.UI
                         new Vector2(8f, 8f),
                         new Vector2(-250f + col * 18f, 34f + row * 18f));
                 }
+            }
+
+            // 喇叭网下方的散热槽
+            for (int i = 0; i < 3; i++)
+            {
+                var vent = UIFactory.CreatePanel("Vent_" + i, face.transform,
+                    new Color(0f, 0f, 0f, 0.35f));
+                vent.raycastTarget = false;
+                UIFactory.Place((RectTransform)vent.transform, new Vector2(1f, 0f),
+                    new Vector2(120f, 2f), new Vector2(-240f, 14f + i * 6f));
             }
 
             // LED 灯条（右上角）

@@ -210,8 +210,41 @@ namespace WaveTeam.UI
                     srt.anchoredPosition = new Vector2(_space.ToX(b) + SlotGap * 0.5f, ry);
                     srt.sizeDelta = new Vector2(_space.SpanToWidth(1f) - SlotGap, TrackHeight - 8f);
                     _slots.Add(srt);
+
+                    // 每个空格中央的小定位点，让空轨也有细节
+                    var dot = UIFactory.CreatePanel("SlotDot_" + t + "_" + b, root,
+                        new Color(1f, 1f, 1f, 0.045f));
+                    dot.raycastTarget = false;
+                    UIFactory.Place((RectTransform)dot.transform, new Vector2(0f, 0.5f),
+                        new Vector2(4f, 4f),
+                        new Vector2(_space.ToX(b) + _space.SpanToWidth(1f) * 0.5f, ry));
                 }
             }
+
+            // 轨与轨之间的导轨：亮线 + 暗线，做出层叠木板的感觉
+            for (int t = 0; t < TrackCount - 1; t++)
+            {
+                float railY = TrackCenterOffset - TrackBlockHalf
+                              + (TrackHeight + TrackGap) * (t + 1) - TrackGap * 0.5f;
+
+                var railHi = UIFactory.CreatePanel("RailHi_" + t, root,
+                    new Color(1f, 1f, 1f, 0.09f));
+                railHi.raycastTarget = false;
+                UIFactory.Place((RectTransform)railHi.transform, new Vector2(0f, 0.5f),
+                    new Vector2(1500f, 1f), new Vector2(0f, railY + 1f));
+
+                var railLo = UIFactory.CreatePanel("RailLo_" + t, root,
+                    new Color(0f, 0f, 0f, 0.35f));
+                railLo.raycastTarget = false;
+                UIFactory.Place((RectTransform)railLo.transform, new Vector2(0f, 0.5f),
+                    new Vector2(1500f, 2f), new Vector2(0f, railY - 1f));
+            }
+
+            // 0 拍处的播放头标记
+            var head = UIFactory.CreatePanel("Playhead", root, UIStyle.Accent);
+            head.raycastTarget = false;
+            UIFactory.Place((RectTransform)head.transform, new Vector2(0f, 0.5f),
+                new Vector2(10f, 8f), new Vector2(LeftMargin - 5f, TrackCenterOffset + TrackBlockHalf + 2f));
 
             // 顶部节拍标尺：每 4 拍一个数字，每拍一根刻度
             var ruler = UIFactory.CreatePanel("BeatRuler", root, new Color(0f, 0f, 0f, 0.35f));
