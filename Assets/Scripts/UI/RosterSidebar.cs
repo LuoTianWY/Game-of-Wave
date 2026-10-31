@@ -210,14 +210,14 @@ namespace WaveTeam.UI
                 // 卡片左上角的编号（01..06），像设备上的通道号
                 var num = UIFactory.PlacePixelText("Index", rt, (index + 1).ToString("00"),
                     1.1f, UIStyle.TextDim, PixelText.Align.Left,
-                    new Vector2(0f, 1f), new Vector2(6f, -6f));
+                    new Vector2(1f, 1f), new Vector2(-46f, -6f));
                 num.raycastTarget = false;
 
                 // 编号旁边一颗小色点，作为通道指示灯
                 var dot = UIFactory.CreatePanel("ChannelDot", rt, UIStyle.Accent2);
                 dot.raycastTarget = false;
-                UIFactory.Place((RectTransform)dot.transform, new Vector2(0f, 1f),
-                    new Vector2(6f, 6f), new Vector2(26f, -12f));
+                UIFactory.Place((RectTransform)dot.transform, new Vector2(1f, 1f),
+                    new Vector2(6f, 6f), new Vector2(-16f, -12f));
                 index++;
 
                 // 卡片之间的分隔槽

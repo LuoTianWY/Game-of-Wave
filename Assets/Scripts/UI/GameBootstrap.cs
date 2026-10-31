@@ -451,7 +451,7 @@ namespace WaveTeam.UI
         }
 
         private const float HeaderHeight = 74f;   // 顶部提示条高度
-        private const float ConsoleHeight = 280f;  // 底部调音台机器高度
+        private const float ConsoleHeight = 320f;  // 底部调音台机器高度（加高，元素不再挤）
 
         /// <summary>
         /// 底部「排练室调音台」：一台像素风的调试机器。
@@ -636,7 +636,7 @@ namespace WaveTeam.UI
                 int row = i / 3;
                 int col = i % 3;
                 float kx = ClusterX + 580f + col * 54f;
-                float ky = row == 0 ? 104f : 32f;
+                float ky = row == 0 ? 122f : 42f;
 
                 var basePlate = UIFactory.CreatePanel("KnobBase_" + i, face.transform,
                     new Color(0f, 0f, 0f, 0.30f));
@@ -664,15 +664,15 @@ namespace WaveTeam.UI
                 new Color(0f, 0f, 0f, 0.40f));
             groove.raycastTarget = false;
             UIFactory.Place((RectTransform)groove.transform, new Vector2(0f, 0f),
-                new Vector2(10f, 120f), new Vector2(ClusterX + 800f, 22f));
+                new Vector2(10f, 140f), new Vector2(ClusterX + 800f, 22f));
             var faderFill = UIFactory.CreatePanel("FaderFill", face.transform, UIStyle.Accent2);
             faderFill.raycastTarget = false;
             UIFactory.Place((RectTransform)faderFill.transform, new Vector2(0f, 0f),
-                new Vector2(10f, 76f), new Vector2(ClusterX + 800f, 22f));
+                new Vector2(10f, 92f), new Vector2(ClusterX + 800f, 22f));
             var faderCap = UIFactory.CreatePanel("FaderCap", face.transform, UIStyle.Text);
             faderCap.raycastTarget = false;
             UIFactory.Place((RectTransform)faderCap.transform, new Vector2(0f, 0f),
-                new Vector2(32f, 16f), new Vector2(ClusterX + 800f, 92f));
+                new Vector2(32f, 16f), new Vector2(ClusterX + 800f, 112f));
 
             // 推子左侧的刻度线
             for (int i = 0; i < 5; i++)
@@ -712,12 +712,12 @@ namespace WaveTeam.UI
                 var swBase = UIFactory.CreatePanel("SwitchBase_" + i, face.transform, UIStyle.Grey);
                 swBase.raycastTarget = false;
                 UIFactory.Place((RectTransform)swBase.transform, new Vector2(0f, 0f),
-                    new Vector2(34f, 14f), new Vector2(ClusterX + 980f, 56f + i * 30f));
+                    new Vector2(34f, 14f), new Vector2(ClusterX + 980f, 70f + i * 30f));
 
                 var lever = UIFactory.CreatePanel("SwitchLever_" + i, face.transform, UIStyle.Text);
                 lever.raycastTarget = false;
                 UIFactory.Place((RectTransform)lever.transform, new Vector2(0f, 0f),
-                    new Vector2(8f, 18f), new Vector2(ClusterX + 986f, 60f + i * 30f));
+                    new Vector2(8f, 18f), new Vector2(ClusterX + 986f, 74f + i * 30f));
             }
 
             var power = UIFactory.CreatePanel("PowerLed", face.transform, UIStyle.Ok);
@@ -725,10 +725,10 @@ namespace WaveTeam.UI
             power.sprite = MakeCircleSprite(12, UIStyle.Ok, UIStyle.EdgeDeep);
             power.color = Color.white;
             UIFactory.Place((RectTransform)power.transform, new Vector2(0f, 0f),
-                new Vector2(12f, 12f), new Vector2(ClusterX + 980f, 116f));
+                new Vector2(12f, 12f), new Vector2(ClusterX + 980f, 130f));
             var powerText = UIFactory.PlacePixelText("PowerText", face.transform, "PWR", 1.2f,
                 UIStyle.TextDim, PixelText.Align.Left,
-                new Vector2(0f, 0f), new Vector2(ClusterX + 998f, 116f));
+                new Vector2(0f, 0f), new Vector2(ClusterX + 998f, 130f));
             powerText.raycastTarget = false;
 
             // 旋钮上方的 LOW/MID/HIGH 标牌 + 推子的 MASTER 标牌
@@ -743,7 +743,7 @@ namespace WaveTeam.UI
 
             var master = UIFactory.PlacePixelText("MasterLabel", face.transform, "MASTER", 1.1f,
                 UIStyle.TextDim, PixelText.Align.Center,
-                new Vector2(0f, 0f), new Vector2(ClusterX + 800f, 124f));
+                new Vector2(0f, 0f), new Vector2(ClusterX + 800f, 166f));
             master.raycastTarget = false;
 
             // 右侧空区的喇叭网孔
@@ -756,7 +756,7 @@ namespace WaveTeam.UI
                     hole.raycastTarget = false;
                     UIFactory.Place((RectTransform)hole.transform, new Vector2(1f, 0f),
                         new Vector2(8f, 8f),
-                        new Vector2(-250f + col * 18f, 34f + row * 18f));
+                        new Vector2(-250f + col * 18f, 44f + row * 20f));
                 }
             }
 
