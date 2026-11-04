@@ -13,6 +13,7 @@ namespace WaveTeam.Audio
         public readonly DrumSample Sample; // 音色源：基准波形定义 + AudioClip + 文件名
         public readonly RhythmPattern Pattern; // 完整节奏型骨架（含全部节奏点）
         public readonly HexCategory Category; // 音色大类：决定六边形贴图与基色（rand 分配，角色绑定后续再做）
+        public readonly bool FixedRhythm;
 
         private readonly List<HexCell> _path; // 展开后的完整波形路径（格序固定，解锁按「路径前缀」计）
         private int _unlockedCells;           // 已解锁的路径格数（前缀长度：path[0.._unlockedCells-1] 亮，其余暗）
@@ -40,6 +41,7 @@ namespace WaveTeam.Audio
         {
             get
             {
+                if (FixedRhythm) return Pattern;
                 var list = new List<RhythmPoint>();
                 for (int i = 0; i < _path.Count && i < _unlockedCells; i++)
                     if (_path[i].IsRhythm) list.Add(Pattern.Points[_path[i].PointIndex]);
@@ -47,23 +49,31 @@ namespace WaveTeam.Audio
             }
         }
 
-        public DrumCharacter(string name, DrumSample sample, RhythmPattern pattern, HexCategory category)
+        /// <summary>播放和评分共用的有效音频事件。</summary>
+        public RhythmPoint[] PlaybackPoints
+        {
+            get { return Sample?.Clip != null ? EffectivePattern.Points : System.Array.Empty<RhythmPoint>(); }
+        }
+
+        public DrumCharacter(string name, DrumSample sample, RhythmPattern pattern, HexCategory category, bool fixedRhythm = false)
         {
             Name = name;
             Sample = sample;
             Pattern = pattern;
             Category = category;
+            FixedRhythm = fixedRhythm;
             _path = pattern.BuildPath(RhythmPattern.StableHash(name));
             // 默认解锁到第 2 个节奏点（下标 1）的节点格；不足 2 点或仅 2 点（末点含尾巴）则全解锁
             int secondNode = -1;
             for (int i = 0; i < _path.Count; i++)
                 if (_path[i].IsRhythm && _path[i].PointIndex == 1) { secondNode = i; break; }
-            _unlockedCells = (secondNode < 0 || Pattern.Points.Length <= 2) ? _path.Count : secondNode + 1;
+            _unlockedCells = (FixedRhythm || secondNode < 0 || Pattern.Points.Length <= 2) ? _path.Count : secondNode + 1;
         }
 
         /// <summary>加点：解锁到下一个节奏点（节点）为止。</summary>
         public void AddPoint()
         {
+            if (FixedRhythm) return;
             for (int i = _unlockedCells; i < _path.Count; i++)
                 if (_path[i].IsRhythm) { _unlockedCells = i + 1; if (Changed != null) Changed(); return; }
         }
@@ -71,6 +81,7 @@ namespace WaveTeam.Audio
         /// <summary>点到哪加到哪：把前缀解锁到指定格（含该格）；已越界则无操作。</summary>
         public void UnlockToCell(int cellIndex)
         {
+            if (FixedRhythm) return;
             int target = System.Math.Min(cellIndex + 1, _path.Count);
             if (target <= _unlockedCells) return;
             _unlockedCells = target;
@@ -80,6 +91,7 @@ namespace WaveTeam.Audio
         /// <summary>右键到哪取消到哪：把前缀收缩到指定格之前（该格起锁定）；至少保留首格（首节点）。</summary>
         public void LockToCell(int cellIndex)
         {
+            if (FixedRhythm) return;
             int target = System.Math.Max(cellIndex, 1);
             if (target >= _unlockedCells) return;
             _unlockedCells = target;
@@ -89,6 +101,7 @@ namespace WaveTeam.Audio
         /// <summary>洗点：回到只保留首个节奏点（首格）。</summary>
         public void ResetPoints()
         {
+            if (FixedRhythm) return;
             if (_unlockedCells == 1) return;
             _unlockedCells = 1;
             if (Changed != null) Changed();

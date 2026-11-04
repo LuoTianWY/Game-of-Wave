@@ -25,6 +25,7 @@ namespace WaveTeam.UI
 
         private HexWaveformRenderer _waveform;
         private AudioSource _source;
+        private System.Action<DrumCharacter> _previewRhythm;
         private bool _dragging;
         private bool _hovering;
         private Vector2 _hoverBasePos;
@@ -39,12 +40,14 @@ namespace WaveTeam.UI
 
         public RectTransform Rect { get { return (RectTransform)transform; } }
 
-        public static DrumCharacterCard Create(DrumCharacter character, Transform parent)
+        public static DrumCharacterCard Create(DrumCharacter character, Transform parent,
+                                               System.Action<DrumCharacter> previewRhythm = null)
         {
             var go = new GameObject("Card_" + character.Name, typeof(RectTransform), typeof(Image), typeof(DrumCharacterCard));
             go.transform.SetParent(parent, false);
             var card = go.GetComponent<DrumCharacterCard>();
             card.Character = character;
+            card._previewRhythm = previewRhythm;
             card.BuildVisual();
             return card;
         }
@@ -113,7 +116,7 @@ namespace WaveTeam.UI
 
             // 名字 + 性格名词（右侧），像素字
             var label = UIFactory.PlacePixelText("Label", transform,
-                Character.Name + " · " + Character.Noun, 1.5f,
+                _previewRhythm == null ? Character.Name + " · " + Character.Noun : Character.Name, 1.5f,
                 UIStyle.Text, PixelText.Align.Left,
                 new Vector2(0f, 0f), new Vector2(90f, 50f));
             label.raycastTarget = false;
@@ -121,8 +124,9 @@ namespace WaveTeam.UI
             // 玩法属性提示：帮助玩家理解角色为什么适合某种编排
             var stats = RehearsalTraits.GetStats(Character.Noun);
 
-            string hintText =
-                "稳 " + stats.Stability + "   密 " + stats.Density;
+            string hintText = _previewRhythm == null
+                ? "稳 " + stats.Stability + "   密 " + stats.Density
+                : Character.Pattern.TotalBeats + " 拍";
 
             var gameplayHint = UIFactory.PlacePixelText(
                 "GameplayHint",
@@ -139,9 +143,12 @@ namespace WaveTeam.UI
 
             AddPlayButton();
 
-            _source = gameObject.AddComponent<AudioSource>();
-            _source.spatialBlend = 0f;
-            _source.playOnAwake = false;
+            if (_previewRhythm == null)
+            {
+                _source = gameObject.AddComponent<AudioSource>();
+                _source.spatialBlend = 0f;
+                _source.playOnAwake = false;
+            }
         }
 
         private void AddPlayButton()
@@ -172,6 +179,11 @@ namespace WaveTeam.UI
 
         private void PlayPreview()
         {
+            if (_previewRhythm != null)
+            {
+                _previewRhythm(Character);
+                return;
+            }
             if (Character == null || Character.Sample == null || Character.Sample.Clip == null) return;
             _source.PlayOneShot(Character.Sample.Clip);
         }

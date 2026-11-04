@@ -1,4 +1,4 @@
-﻿
+
 using System;
 using UnityEngine;
 using UnityEngine.UI;
@@ -48,9 +48,11 @@ namespace WaveTeam.UI
                 : completed == 2
                     ? "排练通过"
                     : "继续努力";
+            if (result.ChallengeTitle != null)
+                grade = result.ChallengePassed ? "节拍已补全" : "继续调整";
 
             AddText(panel.transform, "Title",
-                "排练结算", 36, -35f, 60f,
+                result.ChallengeTitle ?? "排练结算", 36, -35f, 60f,
                 TextAnchor.MiddleCenter);
 
             AddText(panel.transform, "Score",
@@ -67,7 +69,7 @@ namespace WaveTeam.UI
                 (result.DensityGood ? "达成  +34" : "未达成  +0");
 
             AddText(panel.transform, "Feedback",
-                feedback, 26, -215f, 185f,
+                result.Feedback ?? feedback, 26, -215f, 185f,
                 TextAnchor.UpperLeft);
 
             // 根据未完成目标给玩家改进建议
@@ -81,7 +83,7 @@ namespace WaveTeam.UI
                 advice = "建议：减少高密度角色的使用。";
 
             AddText(panel.transform, "Advice",
-                advice, 23, -430f, 70f,
+                result.Advice ?? advice, 23, -430f, 70f,
                 TextAnchor.MiddleLeft);
 
             string progress = completed >= 2
@@ -89,7 +91,7 @@ namespace WaveTeam.UI
                 : "至少完成两个目标才能通过排练。";
 
             AddText(panel.transform, "Progress",
-                progress, 22, -520f, 50f,
+                result.Progress ?? progress, 22, -520f, 50f,
                 TextAnchor.MiddleCenter);
 
             // 返回编排：不清空音轨

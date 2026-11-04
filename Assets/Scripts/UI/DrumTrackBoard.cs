@@ -4,6 +4,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using WaveTeam.Audio;
 using WaveTeam.Core;
+using WaveTeam.Room;
 
 namespace WaveTeam.UI
 {
@@ -11,8 +12,9 @@ namespace WaveTeam.UI
     public sealed class PlacedDrum
     {
         public readonly DrumCharacter Character;
-        public float StartBeat;
-        public int LaneIndex;                             // 0..2，从上到下
+        public float StartBeat { get; internal set; }
+        public int LaneIndex { get; internal set; }        // 0..2，从上到下
+        public readonly bool Locked;
         public readonly float DurationBeats; // 时值（拍）：该角色节奏型占的跨度
         public readonly RectTransform Rect;
         public readonly HexWaveformRenderer Waveform; // 视觉 = 六边形 blob（无框）
@@ -20,7 +22,8 @@ namespace WaveTeam.UI
         public bool ConnectedToNext { get { return ConnectedNeighbor != null; } }
         public GameObject SeamNode;                   // 接缝处的连接点按钮（待连接时显示）
 
-        public PlacedDrum(DrumCharacter character, float startBeat, int track, float durationBeats, RectTransform rect, HexWaveformRenderer waveform)
+        public PlacedDrum(DrumCharacter character, float startBeat, int track, float durationBeats,
+                          RectTransform rect, HexWaveformRenderer waveform, bool locked = false)
         {
             Character = character;
             StartBeat = startBeat;
@@ -28,6 +31,7 @@ namespace WaveTeam.UI
             DurationBeats = durationBeats;
             Rect = rect;
             Waveform = waveform;
+            Locked = locked;
         }
     }
 
@@ -87,6 +91,9 @@ namespace WaveTeam.UI
         private Canvas _canvas;
         private float _panLastX;
         private readonly Stack<UndoAction> _undo = new Stack<UndoAction>();
+        private RehearsalRegion? _editableRegion;
+        internal bool EditingLocked { get; set; }
+        internal System.Action<DrumCharacter> OnPreviewCharacter;
 
         public IReadOnlyList<PlacedDrum> Placed { get { return _placed; } }
         public RectTransform Rect { get { return (RectTransform)transform; } }
@@ -107,11 +114,13 @@ namespace WaveTeam.UI
             return -1;
         }
 
-        public static DrumTrackBoard Create(Transform parent, float topInset, float bottomInset)
+        public static DrumTrackBoard Create(Transform parent, float topInset, float bottomInset,
+                                            RehearsalRegion? editableRegion = null)
         {
             var go = new GameObject("DrumTrackBoard", typeof(RectTransform), typeof(Image), typeof(DrumTrackBoard));
             go.transform.SetParent(parent, false);
             var board = go.GetComponent<DrumTrackBoard>();
+            board._editableRegion = editableRegion;
             board.Build(topInset, bottomInset);
             return board;
         }
@@ -213,6 +222,9 @@ namespace WaveTeam.UI
                 }
             }
 
+            if (_editableRegion.HasValue)
+                DrawEditableRegion(root, _editableRegion.Value);
+
             float blockTop = TrackCenterOffset + TrackBlockHalf;
             var ruler = UIFactory.CreatePanel("BeatRuler", root, new Color(0f, 0f, 0f, 0.35f));
             ruler.raycastTarget = false;
@@ -234,6 +246,24 @@ namespace WaveTeam.UI
                 BindToTimeline((RectTransform)number.transform, beat, blockTop + 11f,
                     number.PreferredSize.y, span: 1f);
             }
+        }
+
+        private void DrawEditableRegion(Transform root, RehearsalRegion region)
+        {
+            float y = TrackRowY(region.LaneIndex);
+            float span = region.EndBeat - region.StartBeat;
+            var fill = UIFactory.CreatePanel("EditableGap", root, new Color(1f, 0.78f, 0.25f, 0.24f));
+            fill.raycastTarget = false;
+            BindToTimeline(fill.rectTransform, region.StartBeat, y, TrackHeight, span: span);
+            foreach (float edge in new[] { y - TrackHeight / 2f + 2f, y + TrackHeight / 2f - 2f })
+            {
+                var line = UIFactory.CreatePanel("GapBorder", root, UIStyle.Accent);
+                line.raycastTarget = false;
+                BindToTimeline(line.rectTransform, region.StartBeat, edge, 3f, span: span);
+            }
+            var label = UIFactory.CreateText("GapLabel", root, "补齐缺口", 16, UIStyle.Accent, TextAnchor.MiddleCenter);
+            label.raycastTarget = false;
+            BindToTimeline(label.rectTransform, region.StartBeat, y + TrackHeight / 2f - 13f, 20f, span: span);
         }
 
         private void DrawSection(Transform root, string name, string text, float startBeat, float endBeat, float tint)
@@ -406,6 +436,14 @@ namespace WaveTeam.UI
         /// <summary>仅在同轨检查区间相交，首尾相接允许放置。</summary>
         public bool CanPlace(DrumCharacter character, float startBeat, int laneIndex, PlacedDrum except = null)
         {
+            if (EditingLocked || (except != null && except.Locked)) return false;
+            if (_editableRegion.HasValue && (character == null ||
+                !_editableRegion.Value.Contains(laneIndex, startBeat, character.Pattern.TotalBeats))) return false;
+            return IsSpaceAvailable(character, startBeat, laneIndex, except);
+        }
+
+        private bool IsSpaceAvailable(DrumCharacter character, float startBeat, int laneIndex, PlacedDrum except)
+        {
             if (character == null || laneIndex < 0 || laneIndex >= TrackCount) return false;
             float duration = character.Pattern.TotalBeats;
             if (!(duration > 0f && startBeat >= 0f && startBeat + duration <= TrackLengthBeats)) return false;
@@ -464,7 +502,8 @@ namespace WaveTeam.UI
         /// <summary>拖拽中每帧刷新落点虚影：绿=能放，红=不能放（重叠 / 越界 / 超出 16 拍）。</summary>
         public void ShowDropPreview(DrumCharacter character, Vector2 screenPos, PlacedDrum moving = null)
         {
-            if (character == null || !ResolveDrop(screenPos, out float beat, out int laneIndex))
+            if (EditingLocked || (moving != null && moving.Locked) ||
+                character == null || !ResolveDrop(screenPos, out float beat, out int laneIndex))
             {
                 HideDropPreview();
                 return;
@@ -551,13 +590,19 @@ namespace WaveTeam.UI
         public void OpenDetail(PlacedDrum pd)
         {
             if (_canvas == null || pd == null) return;
+            if (pd.Locked || pd.Character.FixedRhythm)
+            {
+                OnPreviewCharacter?.Invoke(pd.Character);
+                return;
+            }
+            if (EditingLocked) return;
             DrumDetailPanel.Show(pd.Character, _canvas.transform);
         }
 
         /// <summary>移动校验 + 重定位；失败返回 false（保持原位）。</summary>
         public bool TryMove(PlacedDrum pd, float newBeat, int newTrack)
         {
-            if (!_placed.Contains(pd)) return false;
+            if (pd == null || pd.Locked || !_placed.Contains(pd)) return false;
             if (!CanPlace(pd.Character, newBeat, newTrack, pd)) return false;
             if (pd.StartBeat == newBeat && pd.LaneIndex == newTrack) return true;
             _undo.Push(new UndoAction { Type = UndoType.Move, Drum = pd,
@@ -575,9 +620,32 @@ namespace WaveTeam.UI
             return pd;
         }
 
-        private PlacedDrum PlaceInternal(DrumCharacter character, float startBeat, int track)
+        internal PlacedDrum PlacePreset(DrumCharacter character, RehearsalChallenge.Preset preset)
         {
-            var pd = CreatePlaced(character, startBeat, track);
+            if (!preset.Locked || character == null || !character.FixedRhythm ||
+                !IsSpaceAvailable(character, preset.StartBeat, preset.LaneIndex, null)) return null;
+            return PlaceInternal(character, preset.StartBeat, preset.LaneIndex, locked: true);
+        }
+
+        internal PlacedDrum RestoreEditable(DrumCharacter character, float beat, int laneIndex)
+        {
+            return CanPlace(character, beat, laneIndex) ? PlaceInternal(character, beat, laneIndex) : null;
+        }
+
+        internal void RestoreConnection(PlacedDrum current)
+        {
+            foreach (var next in _placed)
+            {
+                if (!CanConnect(current, next)) continue;
+                current.ConnectedNeighbor = next;
+                RefreshConnections();
+                return;
+            }
+        }
+
+        private PlacedDrum PlaceInternal(DrumCharacter character, float startBeat, int track, bool locked = false)
+        {
+            var pd = CreatePlaced(character, startBeat, track, locked);
             _placed.Add(pd);
             RefreshConnections();
             return pd;
@@ -601,7 +669,7 @@ namespace WaveTeam.UI
 
         public void Remove(PlacedDrum pd)
         {
-            if (!_placed.Remove(pd)) return;
+            if (EditingLocked || pd == null || pd.Locked || !_placed.Remove(pd)) return;
             _undo.Push(new UndoAction { Type = UndoType.Remove, Drum = pd });
             pd.ConnectedNeighbor = null;
             pd.Rect.gameObject.SetActive(false);
@@ -702,35 +770,40 @@ namespace WaveTeam.UI
         /// <summary>只有同轨、紧邻且不同角色的片段可连接。</summary>
         internal static bool CanConnect(PlacedDrum current, PlacedDrum next)
         {
-            return current.LaneIndex == next.LaneIndex
+            return !current.Locked && !next.Locked && current.LaneIndex == next.LaneIndex
                 && Mathf.Abs(next.StartBeat - (current.StartBeat + current.DurationBeats)) < 1e-3f
                 && next.Character.Name != current.Character.Name;
         }
 
         private void ToggleConnection(PlacedDrum cur, PlacedDrum next)
         {
+            if (EditingLocked) return;
             cur.ConnectedNeighbor = cur.ConnectedToNext ? null : next;
             RefreshConnections();
         }
 
         public void Clear()
         {
+            if (EditingLocked) return;
             HideDropPreview();
-            foreach (var p in _placed)
+            for (int i = _placed.Count - 1; i >= 0; i--)
             {
+                var p = _placed[i];
+                if (p.Locked) continue;
                 p.Rect.gameObject.SetActive(false);
                 Object.Destroy(p.Rect.gameObject);
+                _placed.RemoveAt(i);
             }
             foreach (var action in _undo)
                 if (action.Type == UndoType.Remove) Object.Destroy(action.Drum.Rect.gameObject);
-            _placed.Clear();
             _undo.Clear();
+            RefreshConnections();
         }
 
         /// <summary>撤销上一步（放置 / 移动 / 收回）。</summary>
         public void Undo()
         {
-            if (_undo.Count == 0) return;
+            if (EditingLocked || _undo.Count == 0) return;
             var a = _undo.Pop();
             switch (a.Type)
             {
@@ -756,14 +829,24 @@ namespace WaveTeam.UI
             var data = new BoardSaveData();
             data.trackLengthBeats = (int)TrackLengthBeats;
             foreach (var p in _placed)
+            {
+                var points = System.Array.ConvertAll(p.Character.PlaybackPoints,
+                    point => new SavedRhythmPoint { beat = point.Beat, level = point.Level, accent = point.Accent });
                 data.drums.Add(new PlacedDrumEntry
                 {
                     waveformType = p.Character.Waveform.Type.ToString(),
                     startBeat = p.StartBeat,
                     LaneIndex = p.LaneIndex,
                     durationBeats = p.DurationBeats,
-                    track = TrackCount - 1 - p.LaneIndex // 旧字段使用从下向上的编号
+                    track = TrackCount - 1 - p.LaneIndex, // 旧字段使用从下向上的编号
+                    characterName = p.Character.Name,
+                    sampleName = p.Character.Sample.FileName,
+                    category = p.Character.Category,
+                    locked = p.Locked,
+                    connectedToNext = p.ConnectedToNext,
+                    rhythmPoints = points
                 });
+            }
             return data;
         }
 
@@ -777,7 +860,7 @@ namespace WaveTeam.UI
             public int OldTrack;            // Move 旧轨
         }
 
-        private PlacedDrum CreatePlaced(DrumCharacter character, float startBeat, int track)
+        private PlacedDrum CreatePlaced(DrumCharacter character, float startBeat, int track, bool locked)
         {
             // 程序层面是一「方块」（rect 占 [startBeat, startBeat+时值)），玩家看到的只是这个方块里的一坨六边形 blob，无外框
             var go = new GameObject("Drum_" + character.Name, typeof(RectTransform), typeof(CanvasRenderer), typeof(HexWaveformRenderer));
@@ -793,7 +876,19 @@ namespace WaveTeam.UI
             wr.SetCategory(character.Category);           // 六边形外观 = 音色大类贴图（同色系边缘设计）
             wr.raycastTarget = true;                     // 可点击 → 双击打开细节预览（加点/洗点）
 
-            var pd = new PlacedDrum(character, startBeat, track, character.Pattern.TotalBeats, rt, wr);
+            if (locked)
+            {
+                var badge = UIFactory.CreateText("LockedBadge", go.transform, "锁定 · " + character.Waveform.Name,
+                    15, UIStyle.TextDim, TextAnchor.MiddleCenter);
+                badge.raycastTarget = false;
+                badge.rectTransform.anchorMin = new Vector2(0f, 1f);
+                badge.rectTransform.anchorMax = new Vector2(1f, 1f);
+                badge.rectTransform.pivot = new Vector2(0.5f, 1f);
+                badge.rectTransform.sizeDelta = new Vector2(0f, 20f);
+                badge.rectTransform.anchoredPosition = Vector2.zero;
+            }
+
+            var pd = new PlacedDrum(character, startBeat, track, character.Pattern.TotalBeats, rt, wr, locked);
             LayoutPlaced(pd);
             PlacedDrumHandle.Attach(go, this, pd);
             return pd;

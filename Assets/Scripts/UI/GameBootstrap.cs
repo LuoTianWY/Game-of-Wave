@@ -1,4 +1,3 @@
-using System.IO;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -23,6 +22,9 @@ namespace WaveTeam.UI
         private PerformancePlayer _perf;
         private BgmPlayer _bgm;
         private PixelText _statusText;
+        private Text _challengeStatus;
+        private RehearsalChallenge _challenge = RehearsalChallenge.First;
+        private bool _challengeReady;
 
         private GameObject _roomRoot;   // 排练室入口 UI（「进入音轨板」按钮）
         private GameObject _boardRoot;  // 音轨板 UI 根（进入后所有元素，退出即销毁）
@@ -34,6 +36,7 @@ namespace WaveTeam.UI
         private GameObject _objectiveRoot;
         private PixelText _objectiveText;
         private Button _enterBoardButton;
+        private Button _enterMissingBeatButton;
 
         private readonly HashSet<string> _talkedNpcs = new HashSet<string>();
 
@@ -81,7 +84,12 @@ namespace WaveTeam.UI
 
         private void ShowRoomEntry()
         {
-            if (_roomRoot != null) { _roomRoot.SetActive(true); return; }
+            if (_roomRoot != null)
+            {
+                _roomRoot.SetActive(true);
+                RefreshEnterBoardState();
+                return;
+            }
 
             _roomRoot = new GameObject("RoomEntry", typeof(RectTransform));
             _roomRoot.transform.SetParent(_canvas.transform, false);
@@ -100,6 +108,13 @@ namespace WaveTeam.UI
             bRt.anchorMin = bRt.anchorMax = bRt.pivot = new Vector2(1f, 0f);
             bRt.sizeDelta = new Vector2(200, 56);
             bRt.anchoredPosition = new Vector2(-24, 24);
+
+            _enterMissingBeatButton = UIFactory.CreatePixelButton("EnterMissingBeat", _roomRoot.transform,
+                RehearsalChallenge.MissingBeat.Title, 1.6f, UIStyle.Accent, UIStyle.Ink,
+                () => EnterBoard(RehearsalChallenge.MissingBeat));
+            UIResource.ApplyFrameOrColor(_enterMissingBeatButton.image, "UI/btn_play", UIStyle.Accent);
+            UIFactory.Place((RectTransform)_enterMissingBeatButton.transform, new Vector2(1f, 0f),
+                new Vector2(260f, 56f), new Vector2(-240f, 24f));
            
             RefreshEnterBoardState();
             EnsureRoomCharacters();
@@ -188,6 +203,7 @@ namespace WaveTeam.UI
             // 任务清单保留为提示；要恢复门槛，把这里改回
             // `_enterBoardButton.interactable = AreRequiredNpcsTalked();`
             _enterBoardButton.interactable = true;
+            _enterMissingBeatButton.gameObject.SetActive(RehearsalProgress.IsFirstComplete);
         }
 
 
@@ -260,6 +276,13 @@ namespace WaveTeam.UI
 
         private void OnEnterBoard()
         {
+            EnterBoard(RehearsalChallenge.First);
+        }
+
+        private void EnterBoard(RehearsalChallenge challenge)
+        {
+            if (_boardRoot != null) return;
+            _challenge = challenge;
             if (_roomRoot != null) _roomRoot.SetActive(false);
             // 音轨板开着的时候不能再让 F 去开角色面板：那边整屏被音轨板盖住，
             // 玩家看不见是谁被选中，但按 F 仍然会命中最近的角色。
@@ -276,6 +299,8 @@ namespace WaveTeam.UI
             _board = null;
             _sidebar = null;
             _statusText = null;
+            _challengeStatus = null;
+            _resultPanel = null;
             if (_npcInteractor != null) _npcInteractor.SetLocked(false);
             ShowRoomEntry();
         }
@@ -296,32 +321,78 @@ namespace WaveTeam.UI
             UIFactory.Stretch((RectTransform)bg.transform);
             UIResource.ApplySpriteOrColor(bg, "UI/bg_canvas", UIStyle.BgDeep);
 
-            _board = DrumTrackBoard.Create(_boardRoot.transform, GoalPanelTop + GoalPanelHeight, ConsoleHeight);
+            _board = DrumTrackBoard.Create(_boardRoot.transform, GoalPanelTop + GoalPanelHeight, ConsoleHeight,
+                _challenge.EditableRegion);
             _sidebar = RosterSidebar.Create(_boardRoot.transform);
 
             var samples = DrumLibrary.Load();
-            if (samples.Count == 0)
+            bool rhythmChallenge = _challenge.Target != null;
+            _challengeReady = !rhythmChallenge || BuildChallengeArrangement(samples);
+            if (!rhythmChallenge && samples.Count == 0)
             {
                 Debug.LogWarning("[波形小队] 未在 Resources/Audio/drums 下找到可识别的鼓音色，请先导入 ogg（见波形映射表.md）");
             }
-            else
+            else if (!rhythmChallenge)
             {
                 var characters = Roster.Build(Roster.DefaultNames, samples);
                 _sidebar.Populate(characters);
                 Debug.Log("[波形小队] 已加载鼓音色 " + samples.Count + " 个，随机分队 " + characters.Count + " 名角色");
-
-                // 落点虚影要排除右侧栏：拖回侧栏时不显示虚影、也不落位
-                _board.IsDropBlocked = pos =>
-                    RectTransformUtility.RectangleContainsScreenPoint(_sidebar.Rect, pos, null);
-                foreach (var card in _sidebar.Cards)
-                    _board.WireCard(card);
             }
+            _board.IsDropBlocked = pos =>
+                RectTransformUtility.RectangleContainsScreenPoint(_sidebar.Rect, pos, null);
+            foreach (var card in _sidebar.Cards)
+                _board.WireCard(card);
 
             BuildPlayback();
             BuildRehearsalGoalPanel();   // 目标横幅要压在标题条上方，所以放在 Playback 之后建
 
-            if (samples.Count == 0)
-                _statusText.Text = "未找到鼓音色：请把 ogg 放进 Assets/Resources/Audio/drums（见波形映射表.md）";
+            if (!_challengeReady)
+                SetStatus("关卡配置或采样异常，无法开始。");
+            else if (rhythmChallenge)
+                SetStatus("可试听当前编排");
+            else if (samples.Count == 0)
+                SetStatus("未找到鼓音色：请把 ogg 放进 Assets/Resources/Audio/drums（见波形映射表.md）");
+        }
+
+        private bool BuildChallengeArrangement(IReadOnlyList<DrumSample> samples)
+        {
+            var presets = new List<DrumCharacter>();
+            foreach (var preset in _challenge.Presets)
+            {
+                var character = preset.Pattern.CreateCharacter(samples);
+                if (character == null) return false;
+                presets.Add(character);
+            }
+
+            var candidates = new List<DrumCharacter>();
+            foreach (var pattern in _challenge.Candidates)
+            {
+                var character = pattern.CreateCharacter(samples);
+                if (character != null) candidates.Add(character);
+            }
+            for (int i = 0; i < presets.Count; i++)
+                if (_board.PlacePreset(presets[i], _challenge.Presets[i]) == null) return false;
+
+            var region = _challenge.EditableRegion.Value;
+            var trial = new List<PlacedDrum>(_board.Placed);
+            bool solvable = false;
+            foreach (var candidate in candidates)
+            {
+                if (!_board.CanPlace(candidate, region.StartBeat, region.LaneIndex)) continue;
+                trial.Add(new PlacedDrum(candidate, region.StartBeat, region.LaneIndex,
+                    candidate.Pattern.TotalBeats, null, null));
+                solvable = RehearsalEvaluator.EvaluateRhythm(trial, _challenge).ChallengePassed;
+                trial.RemoveAt(trial.Count - 1);
+                if (solvable) break;
+            }
+            if (!solvable) return false;
+
+            _board.OnPreviewCharacter = PreviewCharacter;
+            _sidebar.Populate(candidates, PreviewCharacter);
+            var saved = RehearsalProgress.LoadCompletedMissingBeat()
+                ?? RehearsalProgress.Read(RehearsalProgress.MissingBeatDraftFile);
+            RehearsalProgress.RestoreEdits(_board, saved, samples);
+            return true;
         }
 
         private static Canvas BuildCanvas()
@@ -358,7 +429,7 @@ namespace WaveTeam.UI
 
             // 标题（沿用系统字：这几个字的像素字形不全，用系统字不会缺笔画）
             var title = UIFactory.CreateText(
-                "GoalTitle", panel.transform, "本轮排练目标", 20, UIStyle.Accent,
+                "GoalTitle", panel.transform, _challenge.Title, 20, UIStyle.Accent,
                 TextAnchor.MiddleLeft);
             title.raycastTarget = false;
             var titleRt = (RectTransform)title.transform;
@@ -370,13 +441,37 @@ namespace WaveTeam.UI
             // 目标内容
             var goals = UIFactory.CreateText(
                 "GoalContent", panel.transform,
-                "开场：需要稳定\n发展：增加层次\n整体：避免过度拥挤", 16,
+                _challenge.Hint, 16,
                 UIStyle.Text, TextAnchor.UpperLeft);
             goals.raycastTarget = false;
             var goalsRt = (RectTransform)goals.transform;
             goalsRt.anchorMin = goalsRt.anchorMax = goalsRt.pivot = new Vector2(0f, 1f);
             goalsRt.sizeDelta = new Vector2(510f, 62f);
             goalsRt.anchoredPosition = new Vector2(175f, -4f);
+
+            if (_challenge.Target != null)
+            {
+                titleRt.sizeDelta = new Vector2(470f, 24f);
+                titleRt.anchoredPosition = new Vector2(14f, -4f);
+                goalsRt.sizeDelta = new Vector2(525f, 40f);
+                goalsRt.anchoredPosition = new Vector2(14f, -28f);
+                AddPreviewButton(panel.transform, "PreviewMissing", "试听缺失版", 16f,
+                    () => StartArrangementPreview(presetsOnly: true));
+                AddPreviewButton(panel.transform, "PreviewArrangement", "试听当前版", -16f, PreviewArrangement);
+            }
+        }
+
+        private void AddPreviewButton(Transform parent, string name, string label, float y, System.Action onClick)
+        {
+            var preview = UIFactory.CreateButton(name, parent, label, onClick);
+            UIStyle.ApplyFrame(preview.image, UIStyle.Grey);
+            var text = preview.GetComponentInChildren<Text>();
+            text.fontSize = 17;
+            text.color = UIStyle.Text;
+            text.raycastTarget = false;
+            UIFactory.Place((RectTransform)preview.transform, new Vector2(1f, 0.5f),
+                new Vector2(132f, 28f), new Vector2(-12f, y));
+            preview.interactable = _challengeReady;
         }
 
         private void BuildPlayback()
@@ -415,13 +510,30 @@ namespace WaveTeam.UI
             {
                 if (_board == null || _board.Placed.Count == 0)
                 {
-                    _statusText.Text = msg;
+                    SetStatus(msg);
                     return;
                 }
 
-                var result = RehearsalEvaluator.Evaluate(_board);
-
-                _statusText.Text = "排练评分：" + result.Score;
+                _board.EditingLocked = false;
+                var result = RehearsalEvaluator.Evaluate(_board, _challenge);
+                SetStatus("排练评分：" + result.Score);
+                if (_challenge.IsComplete(result.Score))
+                {
+                    if (_challenge == RehearsalChallenge.First)
+                    {
+                        RehearsalProgress.CompleteFirst();
+                        result.Progress = "排练通过。返回排练室可进入 The Missing Beat。";
+                    }
+                    else
+                    {
+                        var work = CreateWork();
+                        work.challengeCompleted = true;
+                        work.unlockedChallengeId = RehearsalChallenge.NextChallengeId;
+                        bool saved = RehearsalProgress.TryWrite(RehearsalProgress.MissingBeatWorkFile, work, out string path);
+                        result.Progress = saved ? "作品已保存，第三关已解锁。" : "已获 100 分，但存档失败。可重新演出再试。";
+                        if (saved) Debug.Log("[波形小队] 已保存第二关作品：" + path);
+                    }
+                }
 
                 if (_resultPanel != null)
                     Destroy(_resultPanel);
@@ -434,7 +546,7 @@ namespace WaveTeam.UI
                     () =>
                     {
                         _resultPanel = null;
-                        _statusText.Text = "调整波形后再次演出";
+                        SetStatus("调整波形后再次演出");
                     },
 
                     // 返回排练室
@@ -524,10 +636,20 @@ namespace WaveTeam.UI
                 new Vector2(0f, 1f), new Vector2(12f, -8f));
             screenTag.raycastTarget = false;
 
-            _statusText = UIFactory.PlacePixelText("ScreenText", screen.transform, "准备演出", 2f,
-                UIStyle.Ok, PixelText.Align.Left,
-                new Vector2(0f, 0.5f), new Vector2(12f, 0f));
-            _statusText.raycastTarget = false;
+            if (_challenge.Target != null)
+            {
+                _challengeStatus = UIFactory.CreateText("ScreenText", screen.transform, "", 20, UIStyle.Ok);
+                _challengeStatus.raycastTarget = false;
+                UIFactory.Place(_challengeStatus.rectTransform, new Vector2(0f, 0.5f),
+                    new Vector2(620f, 36f), new Vector2(12f, -6f));
+            }
+            else
+            {
+                _statusText = UIFactory.PlacePixelText("ScreenText", screen.transform, "准备演出", 2f,
+                    UIStyle.Ok, PixelText.Align.Left,
+                    new Vector2(0f, 0.5f), new Vector2(12f, 0f));
+                _statusText.raycastTarget = false;
+            }
 
             // 屏幕细节：三条扫描线 + 右上角录制指示灯
             for (int i = 0; i < 3; i++)
@@ -958,39 +1080,85 @@ namespace WaveTeam.UI
 
         private void OnPlay()
         {
-            if (_perf.IsPlaying) return;
-            _statusText.Text = "演出中……";
+            if (!_challengeReady || _board.EditingLocked) return;
+            if (_perf.IsPlaying)
+            {
+                if (_challenge.Target == null) return;
+                _perf.Stop();
+            }
+            _board.EditingLocked = _challenge.Target != null;
+            _board.HideDropPreview();
+            SetStatus("演出中……");
             _perf.Play();
+        }
+
+        private void PreviewArrangement()
+        {
+            StartArrangementPreview(presetsOnly: false);
+        }
+
+        private void StartArrangementPreview(bool presetsOnly)
+        {
+            if (!_challengeReady || _board.EditingLocked) return;
+            _perf.Stop();
+            SetStatus(presetsOnly ? "试听中 · 缺失版" : "试听中 · 当前编排");
+            _perf.PreviewArrangement(_ => SetStatus("编排试听结束"), presetsOnly);
+        }
+
+        private void PreviewCharacter(DrumCharacter character)
+        {
+            if (!_challengeReady || _board.EditingLocked) return;
+            SetStatus("试听中 · " + character.Name);
+            _perf.PreviewCharacter(character, _ => SetStatus("片段试听结束"));
         }
 
         private void OnStop()
         {
             if (_perf != null) _perf.Stop();
-            if (_bgm != null) _bgm.Stop();
-            _statusText.Text = "已停止";
+            _board.EditingLocked = false;
+            SetStatus("已停止");
+        }
+
+        private void SetStatus(string message)
+        {
+            if (_challengeStatus != null) _challengeStatus.text = message;
+            else if (_statusText != null) _statusText.Text = message;
+        }
+
+        private BoardSaveData CreateWork()
+        {
+            var data = _board.ToSaveData();
+            data.challengeId = _challenge.Id;
+            data.bpm = BgmPlayer.Bpm;
+            return data;
         }
 
         private void OnConfirm()
         {
-            var data = _board.ToSaveData();
-            string json = JsonUtility.ToJson(data, true);
-            string path = Path.Combine(Application.persistentDataPath, "drum_arrangement.json");
-            File.WriteAllText(path, json);
-
-
-            Debug.Log("[波形小队] 已确定，编排已保存：\n" + json);
-            _statusText.Text = "已确定 · 已保存 " + data.drums.Count + " 个鼓 → " + path;
+            if (!_challengeReady) return;
+            bool first = _challenge == RehearsalChallenge.First;
+            string file = first ? "drum_arrangement.json" : RehearsalProgress.MissingBeatDraftFile;
+            if (RehearsalProgress.TryWrite(file, CreateWork(), out string path))
+            {
+                Debug.Log("[波形小队] 已保存编排：" + path);
+                SetStatus(first ? "已确定 · 编排已保存" : "编排草稿已保存");
+            }
+            else
+            {
+                SetStatus("编排保存失败");
+            }
         }
 
         private void OnCancel()
         {
+            if (_board.EditingLocked) return;
             _board.Clear();
-            _statusText.Text = "已取消（鼓轨已清空）";
+            SetStatus(_challenge.Target == null ? "已取消（鼓轨已清空）" : "已清空缺口，锁定片段保留");
         }
 
         private void Update()
         {
-            if (_board == null) return; // 排练室视图下无键盘操作
+            if (_board == null || _resultPanel != null) return;
 
             bool ctrl = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
             if (ctrl && Input.GetKeyDown(KeyCode.S))

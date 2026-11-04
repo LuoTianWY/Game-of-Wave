@@ -43,13 +43,13 @@ namespace WaveTeam.UI
 
         public void OnDrag(PointerEventData e)
         {
-            if (e.button == PointerEventData.InputButton.Left)
+            if (!_placed.Locked && e.button == PointerEventData.InputButton.Left)
                 _board.ShowDropPreview(_placed.Character, e.position, _placed);
         }
 
         public void OnEndDrag(PointerEventData e)
         {
-            if (e.button != PointerEventData.InputButton.Left) return;
+            if (_placed.Locked || e.button != PointerEventData.InputButton.Left) return;
             _board.HideDropPreview();
             _board.TryMoveFromPointer(_placed, e.position);
         }

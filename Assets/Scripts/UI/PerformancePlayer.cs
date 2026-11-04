@@ -23,6 +23,8 @@ namespace WaveTeam.UI
         private int _nextHit;
         private int _nextTransition;
         private string _fitText;
+        private Action<string> _onPlaybackEnded;
+        private bool _preview;
 
         private struct Hit
         {
@@ -56,19 +58,45 @@ namespace WaveTeam.UI
 
         public void Play()
         {
+            PlayArrangement(OnFinished, preview: false, presetsOnly: false);
+        }
+
+        public void PreviewArrangement(Action<string> onFinished, bool presetsOnly = false)
+        {
+            PlayArrangement(onFinished, preview: true, presetsOnly);
+        }
+
+        private void PlayArrangement(Action<string> onFinished, bool preview, bool presetsOnly)
+        {
             if (_playing) return;
             if (_board.Placed.Count == 0)
             {
-                OnFinished?.Invoke("先把角色拖到鼓轨上，再演出");
+                onFinished?.Invoke("先把角色拖到鼓轨上，再演出");
                 return;
             }
 
             Stop();
-            BuildTimeline();
+            BuildTimeline(presetsOnly);
+            StartPlayback(true, preview, onFinished);
+        }
+
+        public void PreviewCharacter(DrumCharacter character, Action<string> onFinished)
+        {
+            Stop();
+            ResetTimeline();
+            AddHits(character, 0f);
+            _endBeat = character.Pattern.TotalBeats;
+            StartPlayback(false, true, onFinished);
+        }
+
+        private void StartPlayback(bool withBgm, bool preview, Action<string> onFinished)
+        {
+            _preview = preview;
+            _onPlaybackEnded = onFinished;
             _beatSeconds = _bgm.BeatSeconds;
             double now = AudioSettings.dspTime;
             _startDsp = now + ScheduleAhead;
-            _bgm.PlayScheduled(_startDsp);
+            if (withBgm) _bgm.PlayScheduled(_startDsp);
             _playing = true;
             ScheduleHits(now);
         }
@@ -77,6 +105,8 @@ namespace WaveTeam.UI
         public void Stop()
         {
             _playing = false;
+            _onPlaybackEnded = null;
+            if (_bgm != null) _bgm.Stop();
             foreach (var voice in _voices)
             {
                 voice.Source.Stop();
@@ -84,15 +114,22 @@ namespace WaveTeam.UI
             }
         }
 
-        private void BuildTimeline()
+        private void ResetTimeline()
         {
             _hits.Clear();
             _transitions.Clear();
             _endBeat = 0f;
             _nextHit = 0;
             _nextTransition = 0;
+            _fitText = null;
+        }
 
-            var ordered = new List<PlacedDrum>(_board.Placed);
+        private void BuildTimeline(bool presetsOnly)
+        {
+            ResetTimeline();
+            var ordered = new List<PlacedDrum>();
+            foreach (var drum in _board.Placed)
+                if (!presetsOnly || drum.Locked) ordered.Add(drum);
             ordered.Sort((a, b) => {
                 int laneOrder = a.LaneIndex.CompareTo(b.LaneIndex);
                 return laneOrder != 0 ? laneOrder : a.StartBeat.CompareTo(b.StartBeat);
@@ -103,12 +140,7 @@ namespace WaveTeam.UI
             foreach (var drum in ordered)
             {
                 _endBeat = Mathf.Max(_endBeat, drum.StartBeat + drum.DurationBeats);
-                var clip = drum.Character.Sample != null ? drum.Character.Sample.Clip : null;
-                if (clip != null)
-                {
-                    foreach (var point in drum.Character.EffectivePattern.Points)
-                        _hits.Add(new Hit { Beat = drum.StartBeat + point.Beat, Clip = clip });
-                }
+                AddHits(drum.Character, drum.StartBeat);
 
                 if (previous != null && previous.LaneIndex == drum.LaneIndex)
                 {
@@ -135,6 +167,12 @@ namespace WaveTeam.UI
                 ? "契合 · 只有 " + ordered.Count + " 个鼓，还接不上"
                 : "契合 " + connected + "/" + connectable + " · "
                     + Mathf.RoundToInt(connected / (float)connectable * 100f) + "%";
+        }
+
+        private void AddHits(DrumCharacter character, float startBeat)
+        {
+            foreach (var point in character.PlaybackPoints)
+                _hits.Add(new Hit { Beat = startBeat + point.Beat, Clip = character.Sample.Clip });
         }
 
         private void ScheduleHits(double now)
@@ -183,10 +221,13 @@ namespace WaveTeam.UI
                     transition.Next.Tremble(transition.Intensity);
             }
 
-            if (beat >= _endBeat + 1f)
+            if (beat >= _endBeat + (_preview ? 0f : 1f))
             {
                 _playing = false;
-                OnFinished?.Invoke(_fitText);
+                if (_preview) _bgm.Stop();
+                var finished = _onPlaybackEnded;
+                _onPlaybackEnded = null;
+                finished?.Invoke(_fitText);
             }
         }
     }

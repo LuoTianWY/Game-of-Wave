@@ -194,14 +194,14 @@ namespace WaveTeam.UI
         }
 
         /// <summary>清空并重新陈列角色卡。</summary>
-        public void Populate(IReadOnlyList<DrumCharacter> characters)
+        public void Populate(IReadOnlyList<DrumCharacter> characters, System.Action<DrumCharacter> previewRhythm = null)
         {
             ClearCards();
             float y = -HeaderHeight - 14f;
             int index = 0;
             foreach (var c in characters)
             {
-                var card = DrumCharacterCard.Create(c, _cardsRoot);
+                var card = DrumCharacterCard.Create(c, _cardsRoot, previewRhythm);
                 _cards.Add(card);
                 var rt = card.Rect;
                 rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 1f);
