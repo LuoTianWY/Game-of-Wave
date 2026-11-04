@@ -3,7 +3,7 @@ namespace WaveTeam.Core
     /// <summary>
     /// 鼓轨时间轴坐标：把「拍」映射到「单位 x」（UI 里单位即像素）。
     /// 线性变换：x = OffsetX + beat * PixelsPerBeat。
-    /// 单轨原型只需这一维；多轨（纵向声部轨）后续再扩展。
+    /// 所有纵向音轨共享这一维时间坐标。
     /// </summary>
     public struct BeatSpace
     {

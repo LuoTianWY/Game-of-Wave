@@ -61,11 +61,12 @@ namespace WaveTeam.Audio
             }
         }
 
-        public void Play()
+        public void PlayScheduled(double dspTime)
         {
             if (_clip == null) return;
+            _source.Stop();
             _source.clip = _clip;
-            _source.Play();
+            _source.PlayScheduled(dspTime);
         }
 
         /// <summary>立即停止 BGM 播放。</summary>

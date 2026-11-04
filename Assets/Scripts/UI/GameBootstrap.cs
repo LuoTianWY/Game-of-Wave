@@ -296,7 +296,7 @@ namespace WaveTeam.UI
             UIFactory.Stretch((RectTransform)bg.transform);
             UIResource.ApplySpriteOrColor(bg, "UI/bg_canvas", UIStyle.BgDeep);
 
-            _board = DrumTrackBoard.Create(_boardRoot.transform);
+            _board = DrumTrackBoard.Create(_boardRoot.transform, GoalPanelTop + GoalPanelHeight, ConsoleHeight);
             _sidebar = RosterSidebar.Create(_boardRoot.transform);
 
             var samples = DrumLibrary.Load();
@@ -350,10 +350,10 @@ namespace WaveTeam.UI
             rt.anchorMin = rt.anchorMax = rt.pivot =
                 new Vector2(0.5f, 1f);
 
-            rt.sizeDelta = new Vector2(700f, 70f);
+            rt.sizeDelta = new Vector2(700f, GoalPanelHeight);
 
             rt.anchoredPosition =
-                new Vector2(0f, -84f);
+                new Vector2(0f, -GoalPanelTop);
 
 
             // 标题（沿用系统字：这几个字的像素字形不全，用系统字不会缺笔画）
@@ -451,6 +451,8 @@ namespace WaveTeam.UI
         }
 
         private const float HeaderHeight = 74f;   // 顶部提示条高度
+        private const float GoalPanelTop = 84f;
+        private const float GoalPanelHeight = 70f;
         private const float ConsoleHeight = 320f;  // 底部调音台机器高度（加高，元素不再挤）
 
         /// <summary>

@@ -6,15 +6,12 @@ namespace WaveTeam.UI
 {
     /// <summary>
     /// 已放鼓单元的交互：左键拖拽移动、右键收回。
-    /// 拖拽期间提升到画布顶层跟随鼠标；松开时经 Board.TryMove 校验，失败回原位。
+    /// 拖拽期间显示吸附预览，松开时才修改片段位置。
     /// </summary>
     public sealed class PlacedDrumHandle : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerClickHandler
     {
         private DrumTrackBoard _board;
         private PlacedDrum _placed;
-        private Canvas _rootCanvas;
-        private Transform _originalParent;
-        private Vector2 _originalPivot;
 
         public static PlacedDrumHandle Attach(GameObject cell, DrumTrackBoard board, PlacedDrum placed)
         {
@@ -22,7 +19,6 @@ namespace WaveTeam.UI
             if (h == null) h = cell.AddComponent<PlacedDrumHandle>();
             h._board = board;
             h._placed = placed;
-            h._originalPivot = placed.Rect.pivot;
             placed.Character.Changed += h.Refresh;
             return h;
         }
@@ -42,36 +38,20 @@ namespace WaveTeam.UI
 
         public void OnBeginDrag(PointerEventData e)
         {
-            _originalParent = transform.parent;
-            _originalPivot = _placed.Rect.pivot;
-
-            _rootCanvas = GetComponentInParent<Canvas>();
-            if (_rootCanvas != null)
-            {
-                transform.SetParent(_rootCanvas.transform, true);
-                transform.SetAsLastSibling();
-            }
-            _placed.Rect.pivot = new Vector2(0.5f, 0.5f);
-            FollowPointer(e);
+            OnDrag(e);
         }
 
         public void OnDrag(PointerEventData e)
         {
-            FollowPointer(e);
+            if (e.button == PointerEventData.InputButton.Left)
+                _board.ShowDropPreview(_placed.Character, e.position, _placed);
         }
 
         public void OnEndDrag(PointerEventData e)
         {
-            if (_originalParent != null) transform.SetParent(_originalParent, false);
-            _placed.Rect.pivot = _originalPivot;
-
-            float beat = _board.ScreenToBeat(e.position);
-            int track = _board.ScreenToTrack(e.position);
-            if (!_board.TryMove(_placed, beat, track))
-            {
-                _board.MoveTo(_placed, _placed.StartBeat, _placed.Track); // 回原位
-            }
-            _rootCanvas = null;
+            if (e.button != PointerEventData.InputButton.Left) return;
+            _board.HideDropPreview();
+            _board.TryMoveFromPointer(_placed, e.position);
         }
 
         public void OnPointerClick(PointerEventData e)
@@ -83,17 +63,6 @@ namespace WaveTeam.UI
             else if (e.button == PointerEventData.InputButton.Left && e.clickCount >= 2)
             {
                 _board.OpenDetail(_placed); // 左键双击：打开细节预览（加点/洗点）；单击留给拖拽
-            }
-        }
-
-        private void FollowPointer(PointerEventData e)
-        {
-            if (_rootCanvas == null) return;
-            var canvasRect = (RectTransform)_rootCanvas.transform;
-            Vector3 world;
-            if (RectTransformUtility.ScreenPointToWorldPointInRectangle(canvasRect, e.position, _rootCanvas.worldCamera, out world))
-            {
-                _placed.Rect.position = world;
             }
         }
     }

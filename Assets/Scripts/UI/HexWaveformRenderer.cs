@@ -21,6 +21,7 @@ namespace WaveTeam.UI
 
         private float _pitch = DefaultPitch;
         private HexLayout _layout = new HexLayout(DefaultPitch);
+        private float _verticalLimit;
         private List<HexCell> _path;          // 展开后的六边形路径
         private float _pathMinX, _pathMaxX;   // 路径横向包围盒（HexLayout 空间，用于内容宽度）
         private float _pathMinY, _pathMaxY;   // 路径纵向包围盒（HexLayout 空间，用于垂直居中）
@@ -116,6 +117,24 @@ namespace WaveTeam.UI
             SetVerticesDirty();
         }
 
+        /// <summary>限制板上波形高度，同时保留时间轴的水平格距。</summary>
+        public void SetVerticalLimit(float height)
+        {
+            _verticalLimit = height;
+            SetVerticesDirty();
+        }
+
+        private float VerticalScale
+        {
+            get
+            {
+                if (_verticalLimit <= 0f) return 1f;
+                // 角色偏移最多两行、波峰再加两行，并为节奏点光晕留空。
+                float halfHeight = 4f * _layout.VerticalPitch + 1.5f * _layout.Size;
+                return Mathf.Min(1f, _verticalLimit / (2f * halfHeight));
+            }
+        }
+
         /// <summary>设置连接桥的格（null/空 = 无桥）；connected=true 画亮色（已连接），否则画隐约未解锁。仅显示，不参与加点/发声。</summary>
         public void SetBridge(List<HexCoord> cells, bool connected)
         {
@@ -190,7 +209,9 @@ namespace WaveTeam.UI
             if (rect.width <= 0f || rect.height <= 0f || _path == null || _path.Count == 0) return;
 
             // 固定格距，水平锚定 rect 左缘（q=0 中心 = 拍线）；垂直默认居中，板上锚定 r=0 到中心（让纵向高度差异可见）
-            float originY = _baselineAnchored ? rect.center.y : rect.center.y - (_pathMinY + _pathMaxY) * 0.5f;
+            float verticalScale = VerticalScale;
+            float originY = _baselineAnchored ? rect.center.y
+                : rect.center.y - (_pathMinY + _pathMaxY) * 0.5f * verticalScale;
             float size = _layout.Size;
             float pulse = 1f + _tremble * 0.15f;
 
@@ -201,14 +222,14 @@ namespace WaveTeam.UI
             {
                 var cell = _path[i];
                 Vector2 p = _layout.HexToPixel(cell.Hex);
-                Vector2 c = new Vector2(p.x, p.y + originY);
+                Vector2 c = new Vector2(p.x, p.y * verticalScale + originY);
                 bool tailFused = _tailFused && i >= _tailStart;
                 bool locked = !tailFused && (i >= _unlockedCells || (_tailPending && i >= _tailStart));
 
                 if (tailFused)
                 {
                     // 已连接：尾巴用融合色画亮（前后角色颜色混合），表示边界打通
-                    DrawHex(vh, c, size * 0.92f * pulse, _tailFuseColor, _hexUv);
+                    DrawHex(vh, c, size * 0.92f * pulse, _tailFuseColor, _hexUv, verticalScale);
                 }
                 else if (locked)
                 {
@@ -216,18 +237,18 @@ namespace WaveTeam.UI
                     var lc = cell.IsRhythm
                         ? new Color(0.42f, 0.44f, 0.52f, 0.50f)   // 未解锁节奏点
                         : new Color(0.42f, 0.44f, 0.52f, 0.22f);  // 未解锁填充
-                    DrawHex(vh, c, size * (cell.IsRhythm ? 0.92f : 0.8f), lc, _hexUv);
+                    DrawHex(vh, c, size * (cell.IsRhythm ? 0.92f : 0.8f), lc, _hexUv, verticalScale);
                 }
                 else if (cell.IsRhythm)
                 {
                     // 光效：先画一圈放大低透明度的 halo，再画实心（重拍用纯白提亮）
                     var halo = new Color(rhythmColor.r, rhythmColor.g, rhythmColor.b, rhythmColor.a * 0.35f);
-                    DrawHex(vh, c, size * 1.30f * pulse, halo, _hexUv);
-                    DrawHex(vh, c, size * pulse, cell.Accent ? Color.white : rhythmColor, _hexUv);
+                    DrawHex(vh, c, size * 1.30f * pulse, halo, _hexUv, verticalScale);
+                    DrawHex(vh, c, size * pulse, cell.Accent ? Color.white : rhythmColor, _hexUv, verticalScale);
                 }
                 else
                 {
-                    DrawHex(vh, c, size * 0.92f * pulse, normalColor, _hexUv); // 略小留缝
+                    DrawHex(vh, c, size * 0.92f * pulse, normalColor, _hexUv, verticalScale);
                 }
             }
 
@@ -241,7 +262,7 @@ namespace WaveTeam.UI
                 foreach (var h in _bridge)
                 {
                     Vector2 bp = _layout.HexToPixel(h);
-                    DrawHex(vh, new Vector2(bp.x, bp.y + originY), br, bridgeColor, _hexUv);
+                    DrawHex(vh, new Vector2(bp.x, bp.y * verticalScale + originY), br, bridgeColor, _hexUv, verticalScale);
                 }
             }
         }
@@ -251,8 +272,10 @@ namespace WaveTeam.UI
         {
             if (_path == null || _path.Count == 0) return -1;
             var rect = GetPixelAdjustedRect();
-            float originY = _baselineAnchored ? rect.center.y : rect.center.y - (_pathMinY + _pathMaxY) * 0.5f;
-            var h = _layout.PixelToHex(new Vector2(localPoint.x, localPoint.y - originY));
+            float verticalScale = VerticalScale;
+            float originY = _baselineAnchored ? rect.center.y
+                : rect.center.y - (_pathMinY + _pathMaxY) * 0.5f * verticalScale;
+            var h = _layout.PixelToHex(new Vector2(localPoint.x, (localPoint.y - originY) / verticalScale));
             for (int i = 0; i < _path.Count; i++)
                 if (_path[i].Hex == h) return i;
             return -1;
@@ -272,7 +295,7 @@ namespace WaveTeam.UI
 
         // 画一个尖顶朝上的实心六边形（中心 + 外接圆半径），从顶点 0 做凸扇形三角剖分。
         // uvRect = 贴图里六边形的包围盒；顶点 UV 按单位圆位置映射进去，使贴图正好铺满这个六边形。
-        private static void DrawHex(VertexHelper vh, Vector2 center, float radius, Color c, Vector4 uvRect)
+        private static void DrawHex(VertexHelper vh, Vector2 center, float radius, Color c, Vector4 uvRect, float verticalScale)
         {
             int s = vh.currentVertCount;
             float cu = uvRect.x + uvRect.z * 0.5f;
@@ -283,7 +306,7 @@ namespace WaveTeam.UI
                 float cx = Mathf.Cos(ang);
                 float cy = Mathf.Sin(ang);
                 vh.AddVert(
-                    new Vector3(center.x + radius * cx, center.y + radius * cy, 0f),
+                    new Vector3(center.x + radius * cx, center.y + radius * cy * verticalScale, 0f),
                     c,
                     new Vector2(cu + uvRect.z * 0.5f * cx, cv + uvRect.w * 0.5f * cy));
             }
