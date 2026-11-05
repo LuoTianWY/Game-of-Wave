@@ -4,8 +4,8 @@ using WaveTeam.Core;
 namespace WaveTeam.Audio
 {
     /// <summary>
-    /// 鼓原型里的一名角色：一个名字 + 随机绑定的一种鼓音色（波形 + AudioClip）。
-    /// 波形即人格：性格名词跟随当前波形。
+    /// 角色 Wave：保留原有鼓音色、节奏与解锁路径，也可携带独立的低音/旋律音符。
+    /// Rhythm 角色的性格名词继续跟随鼓波形；有音高的 Wave 使用乐器标识和 MIDI 事件。
     /// </summary>
     public sealed class DrumCharacter
     {
@@ -14,6 +14,9 @@ namespace WaveTeam.Audio
         public readonly RhythmPattern Pattern; // 完整节奏型骨架（含全部节奏点）
         public readonly HexCategory Category; // 音色大类：决定六边形贴图与基色（rand 分配，角色绑定后续再做）
         public readonly bool FixedRhythm;
+        public readonly WaveKind Kind;
+        public readonly string InstrumentId;
+        public readonly IReadOnlyList<MelodyNote> MelodyNotes;
 
         private readonly List<HexCell> _path; // 展开后的完整波形路径（格序固定，解锁按「路径前缀」计）
         private int _unlockedCells;           // 已解锁的路径格数（前缀长度：path[0.._unlockedCells-1] 亮，其余暗）
@@ -22,10 +25,12 @@ namespace WaveTeam.Audio
         public event System.Action Changed;
 
         /// <summary>当前波形（原型期 = 基准定义；练习/磨合改变波形时再替换）。</summary>
-        public WaveformDefinition Waveform { get { return Sample.Definition; } }
+        public WaveformDefinition Waveform { get { return Sample?.Definition; } }
 
         /// <summary>性格名词（跟随波形）。</summary>
-        public string Noun { get { return Sample.Definition.Noun; } }
+        public string Noun => Kind == WaveKind.Rhythm ? Sample.Definition.Noun : Kind == WaveKind.Bass ? "低音" : "旋律";
+        public string SoundLabel => Kind == WaveKind.Rhythm ? Waveform.Name :
+            InstrumentId == MelodySynthesizer.Bass ? "合成低音" : "合成键音";
 
         /// <summary>已解锁的路径格数（前缀长度）。</summary>
         public int UnlockedCells { get { return _unlockedCells; } }
@@ -52,7 +57,7 @@ namespace WaveTeam.Audio
         /// <summary>播放和评分共用的有效音频事件。</summary>
         public RhythmPoint[] PlaybackPoints
         {
-            get { return Sample?.Clip != null ? EffectivePattern.Points : System.Array.Empty<RhythmPoint>(); }
+            get { return Kind == WaveKind.Rhythm && Sample?.Clip != null ? EffectivePattern.Points : System.Array.Empty<RhythmPoint>(); }
         }
 
         public DrumCharacter(string name, DrumSample sample, RhythmPattern pattern, HexCategory category, bool fixedRhythm = false)
@@ -62,12 +67,38 @@ namespace WaveTeam.Audio
             Pattern = pattern;
             Category = category;
             FixedRhythm = fixedRhythm;
+            Kind = WaveKind.Rhythm;
+            InstrumentId = sample?.FileName;
+            MelodyNotes = System.Array.Empty<MelodyNote>();
             _path = pattern.BuildPath(RhythmPattern.StableHash(name));
             // 默认解锁到第 2 个节奏点（下标 1）的节点格；不足 2 点或仅 2 点（末点含尾巴）则全解锁
             int secondNode = -1;
             for (int i = 0; i < _path.Count; i++)
                 if (_path[i].IsRhythm && _path[i].PointIndex == 1) { secondNode = i; break; }
             _unlockedCells = (FixedRhythm || secondNode < 0 || Pattern.Points.Length <= 2) ? _path.Count : secondNode + 1;
+        }
+
+        public DrumCharacter(string name, WaveKind kind, string instrumentId, MelodyNote[] notes, float durationBeats)
+        {
+            if (kind != WaveKind.Melody && kind != WaveKind.Bass)
+                throw new System.ArgumentException("Use the rhythm constructor for percussion.", nameof(kind));
+            if (!MelodySynthesizer.Supports(instrumentId) || string.IsNullOrWhiteSpace(name) ||
+                !(durationBeats > 0 && durationBeats <= 16) || notes == null || notes.Length == 0)
+                throw new System.ArgumentException("Invalid pitched wave.");
+            var copy = (MelodyNote[])notes.Clone();
+            foreach (var note in copy)
+                if (!note.IsValid(durationBeats)) throw new System.ArgumentException("Invalid melody note.");
+            System.Array.Sort(copy, (a, b) => a.StartBeat.CompareTo(b.StartBeat));
+            Name = name;
+            Kind = kind;
+            InstrumentId = instrumentId;
+            MelodyNotes = System.Array.AsReadOnly(copy);
+            FixedRhythm = true;
+            Category = kind == WaveKind.Bass ? HexCategory.Synth : HexCategory.Piano;
+            Pattern = new RhythmPattern(System.Array.ConvertAll(copy,
+                note => new RhythmPoint(note.StartBeat, 0, true)), durationBeats);
+            _path = Pattern.BuildPath(RhythmPattern.StableHash(name));
+            _unlockedCells = _path.Count;
         }
 
         /// <summary>加点：解锁到下一个节奏点（节点）为止。</summary>

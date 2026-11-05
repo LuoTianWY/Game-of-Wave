@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace WaveTeam.Core
 {
     /// <summary>
-    /// 单个已放鼓的存档条目：波形类型、拍区间和轨道。
+    /// 单个已放 Wave 的存档条目：类型、拍区间、轨道和可恢复的演奏事件。
     /// 波形类型和样本名标识音色，节奏点记录本次作品实际发声的事件。
     /// </summary>
     [Serializable]
@@ -22,6 +22,9 @@ namespace WaveTeam.Core
         public bool locked;
         public bool connectedToNext;
         public SavedRhythmPoint[] rhythmPoints;
+        public WaveKind waveKind; // Missing in old JSON means Rhythm.
+        public string instrumentId;
+        public MelodyNote[] melodyNotes;
     }
 
     [Serializable]
@@ -32,15 +35,27 @@ namespace WaveTeam.Core
         public bool accent;
     }
 
-    /// <summary>鼓轨编排存档（供 JsonUtility 序列化）。</summary>
+    /// <summary>多轨 Wave 编排存档（供 JsonUtility 序列化）。</summary>
     [Serializable]
     public sealed class BoardSaveData
     {
         public int trackLengthBeats;
         public string challengeId;
+        public int challengeRevision;
         public float bpm;
+        public bool withoutBgm;
         public bool challengeCompleted;
         public string unlockedChallengeId;
+        public string songId;
+        public string songName;
+        public string createdAtUtc;
+        public int score;
         public List<PlacedDrumEntry> drums = new List<PlacedDrumEntry>();
+    }
+
+    [Serializable]
+    public sealed class SongLibraryData
+    {
+        public List<BoardSaveData> works = new List<BoardSaveData>();
     }
 }

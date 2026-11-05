@@ -12,7 +12,8 @@ namespace WaveTeam.UI
             Transform parent,
             RehearsalScoreResult result,
             Action onRetry,
-            Action onExit)
+            Action onExit,
+            Action onSave = null)
         {
             // 整屏半透明遮罩
             var overlay = UIFactory.CreatePanel(
@@ -56,7 +57,7 @@ namespace WaveTeam.UI
                 TextAnchor.MiddleCenter);
 
             AddText(panel.transform, "Score",
-                grade + "    " + result.Score + " / 100",
+                (result.Grade ?? grade) + "    " + result.Score + " / 100",
                 34, -115f, 65f,
                 TextAnchor.MiddleCenter);
 
@@ -135,6 +136,18 @@ namespace WaveTeam.UI
                 new Vector2(0.5f, 0f);
             exitRt.sizeDelta = new Vector2(280f, 64f);
             exitRt.anchoredPosition = new Vector2(170f, 40f);
+            if (onSave != null)
+            {
+                retryRt.sizeDelta = exitRt.sizeDelta = new Vector2(230f, 64f);
+                retryRt.anchoredPosition = new Vector2(-260f, 40f);
+                exitRt.anchoredPosition = new Vector2(260f, 40f);
+                var save = UIFactory.CreateButton("SaveSongButton", panel.transform, "保存作品", onSave);
+                UIStyle.ApplyFrame(save.image, UIStyle.Accent);
+                save.GetComponentInChildren<Text>().fontSize = 24;
+                save.GetComponentInChildren<Text>().color = UIStyle.Ink;
+                UIFactory.Place((RectTransform)save.transform, new Vector2(0.5f, 0f),
+                    new Vector2(230f, 64f), new Vector2(0f, 40f));
+            }
 
             return overlay.gameObject;
         }

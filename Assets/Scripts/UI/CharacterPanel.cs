@@ -307,19 +307,11 @@ namespace WaveTeam.UI
                 new Vector2(40f, -35f));
 
             // 对话正文
-            var dialogue = PixelText.Create(
-                "Dialogue",
-                dialogueBox.transform,
-                Wrap(Profile.Dialogue, 20),
-                TextScale,
-                Color.white);
-
-            UIFactory.Place(
-                (RectTransform)dialogue.transform,
-                new Vector2(0f, 1f),
-                dialogue.PreferredSize,
-                new Vector2(40f, -110f));
-
+            var dialogue = UIFactory.CreateText("Dialogue", dialogueBox.transform,
+                Profile.Dialogue, 24, UIStyle.Text, TextAnchor.UpperLeft);
+            dialogue.raycastTarget = false;
+            UIFactory.Place(dialogue.rectTransform, new Vector2(0f, 1f),
+                new Vector2(820f, 150f), new Vector2(40f, -100f));
             // 返回按钮
             MakeButton(
                 dialogueBox.transform,

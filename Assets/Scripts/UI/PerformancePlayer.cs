@@ -2,19 +2,24 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using WaveTeam.Audio;
+using WaveTeam.Core;
 
 namespace WaveTeam.UI
 {
-    /// <summary>用同一个 DSP 起点调度 BGM 和所有轨道的节奏点。</summary>
+    /// <summary>用同一个 DSP 起点调度 BGM、鼓点、低音和旋律音符。</summary>
     public sealed class PerformancePlayer : MonoBehaviour
     {
         private const double ScheduleAhead = 0.2;
 
         private DrumTrackBoard _board;
         private BgmPlayer _bgm;
+        private bool _useBackgroundMusic;
+        private float _playbackBpm;
+        public float CurrentBpm => _playbackBpm > 0f ? _playbackBpm : BgmPlayer.Bpm;
         private readonly List<Voice> _voices = new List<Voice>();
         private readonly List<Hit> _hits = new List<Hit>();
         private readonly List<Transition> _transitions = new List<Transition>();
+        private readonly MelodySynthesizer _synth = new MelodySynthesizer();
 
         private bool _playing;
         private double _startDsp;
@@ -25,11 +30,18 @@ namespace WaveTeam.UI
         private string _fitText;
         private Action<string> _onPlaybackEnded;
         private bool _preview;
+        private bool _showBoardProgress;
+        private bool _presetsOnly;
 
         private struct Hit
         {
             public float Beat;
             public AudioClip Clip;
+            public WaveKind Kind;
+            public string Instrument;
+            public int MidiNote;
+            public float DurationBeats;
+            public float Velocity;
         }
 
         private struct Transition
@@ -50,10 +62,15 @@ namespace WaveTeam.UI
 
         public Action<string> OnFinished;
 
-        public void Setup(DrumTrackBoard board, BgmPlayer bgm)
+        public void Setup(DrumTrackBoard board, BgmPlayer bgm, bool useBackgroundMusic = true, float playbackBpm = 0f)
         {
+            Stop();
+            foreach (var voice in _voices) voice.Source.clip = null;
+            _synth.Dispose();
             _board = board;
             _bgm = bgm;
+            _useBackgroundMusic = useBackgroundMusic;
+            _playbackBpm = playbackBpm > 0f && playbackBpm < 400f ? playbackBpm : 0f;
         }
 
         public void Play()
@@ -77,7 +94,9 @@ namespace WaveTeam.UI
 
             Stop();
             BuildTimeline(presetsOnly);
-            StartPlayback(true, preview, onFinished);
+            _showBoardProgress = true;
+            _presetsOnly = presetsOnly;
+            StartPlayback(_useBackgroundMusic, preview, onFinished);
         }
 
         public void PreviewCharacter(DrumCharacter character, Action<string> onFinished)
@@ -86,6 +105,7 @@ namespace WaveTeam.UI
             ResetTimeline();
             AddHits(character, 0f);
             _endBeat = character.Pattern.TotalBeats;
+            _showBoardProgress = false;
             StartPlayback(false, true, onFinished);
         }
 
@@ -93,7 +113,14 @@ namespace WaveTeam.UI
         {
             _preview = preview;
             _onPlaybackEnded = onFinished;
-            _beatSeconds = _bgm.BeatSeconds;
+            _beatSeconds = 60.0 / CurrentBpm;
+            for (int i = 0; i < _hits.Count; i++)
+            {
+                var hit = _hits[i];
+                if (hit.Kind == WaveKind.Rhythm) continue;
+                hit.Clip = _synth.GetClip(hit.Instrument, hit.MidiNote, hit.DurationBeats * _beatSeconds);
+                _hits[i] = hit;
+            }
             double now = AudioSettings.dspTime;
             _startDsp = now + ScheduleAhead;
             if (withBgm) _bgm.PlayScheduled(_startDsp);
@@ -101,17 +128,24 @@ namespace WaveTeam.UI
             ScheduleHits(now);
         }
 
-        /// <summary>停止已发声和仍在排队的鼓点。</summary>
+        /// <summary>停止已发声和仍在排队的鼓点与音符。</summary>
         public void Stop()
         {
             _playing = false;
+            if (_board != null) _board.SetPlaybackBeat(-1f, false);
             _onPlaybackEnded = null;
             if (_bgm != null) _bgm.Stop();
             foreach (var voice in _voices)
             {
-                voice.Source.Stop();
+                if (voice.Source != null) voice.Source.Stop();
                 voice.BusyUntil = 0;
             }
+        }
+
+        private void OnDestroy()
+        {
+            Stop();
+            _synth.Dispose();
         }
 
         private void ResetTimeline()
@@ -171,8 +205,20 @@ namespace WaveTeam.UI
 
         private void AddHits(DrumCharacter character, float startBeat)
         {
+            if (character.Kind != WaveKind.Rhythm)
+            {
+                foreach (var note in character.MelodyNotes)
+                {
+                    if (note.Velocity <= 0f) continue;
+                    _hits.Add(new Hit {
+                        Beat = startBeat + note.StartBeat, Kind = character.Kind, Instrument = character.InstrumentId,
+                        MidiNote = note.MidiNote, DurationBeats = note.DurationBeats, Velocity = note.Velocity
+                    });
+                }
+                return;
+            }
             foreach (var point in character.PlaybackPoints)
-                _hits.Add(new Hit { Beat = startBeat + point.Beat, Clip = character.Sample.Clip });
+                _hits.Add(new Hit { Beat = startBeat + point.Beat, Clip = character.Sample.Clip, Velocity = 1f });
         }
 
         private void ScheduleHits(double now)
@@ -186,6 +232,8 @@ namespace WaveTeam.UI
                 // 主线程长帧错过计划时间时，给该批鼓点同一个补发时间。
                 time = Math.Max(time, now + 0.02);
                 var voice = GetVoice(now);
+                voice.Source.pitch = 1f;
+                voice.Source.volume = hit.Velocity;
                 voice.Source.clip = hit.Clip;
                 voice.Source.PlayScheduled(time);
                 voice.BusyUntil = time + hit.Clip.samples / (double)hit.Clip.frequency;
@@ -212,6 +260,8 @@ namespace WaveTeam.UI
             double now = AudioSettings.dspTime;
             ScheduleHits(now);
             double beat = (now - _startDsp) / _beatSeconds;
+            if (_showBoardProgress && _board != null)
+                _board.SetPlaybackBeat((float)beat, _presetsOnly);
             while (_nextTransition < _transitions.Count && _transitions[_nextTransition].Beat <= beat)
             {
                 var transition = _transitions[_nextTransition++];
@@ -224,6 +274,7 @@ namespace WaveTeam.UI
             if (beat >= _endBeat + (_preview ? 0f : 1f))
             {
                 _playing = false;
+                if (_board != null) _board.SetPlaybackBeat(-1f, false);
                 if (_preview) _bgm.Stop();
                 var finished = _onPlaybackEnded;
                 _onPlaybackEnded = null;

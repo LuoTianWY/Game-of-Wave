@@ -8,10 +8,12 @@ namespace WaveTeam.UI
     /// 已放鼓单元的交互：左键拖拽移动、右键收回。
     /// 拖拽期间显示吸附预览，松开时才修改片段位置。
     /// </summary>
-    public sealed class PlacedDrumHandle : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerClickHandler
+    public sealed class PlacedDrumHandle : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler,
+        IPointerClickHandler, IPointerEnterHandler, IPointerExitHandler
     {
         private DrumTrackBoard _board;
         private PlacedDrum _placed;
+        private bool _dragging;
 
         public static PlacedDrumHandle Attach(GameObject cell, DrumTrackBoard board, PlacedDrum placed)
         {
@@ -28,6 +30,7 @@ namespace WaveTeam.UI
         {
             if (_placed == null || _placed.Character == null || _placed.Waveform == null) return;
             _placed.Waveform.SetPattern(_placed.Character.EffectivePattern, RhythmPattern.StableHash(_placed.Character.Name));
+            _board.NotifyArrangementChanged();
         }
 
         private void OnDestroy()
@@ -38,6 +41,10 @@ namespace WaveTeam.UI
 
         public void OnBeginDrag(PointerEventData e)
         {
+            if (e.button != PointerEventData.InputButton.Left) return;
+            _dragging = true;
+            _board.HoverPlaced(_placed, false);
+            _board.SelectPlaced(_placed);
             OnDrag(e);
         }
 
@@ -49,6 +56,7 @@ namespace WaveTeam.UI
 
         public void OnEndDrag(PointerEventData e)
         {
+            _dragging = false;
             if (_placed.Locked || e.button != PointerEventData.InputButton.Left) return;
             _board.HideDropPreview();
             _board.TryMoveFromPointer(_placed, e.position);
@@ -60,10 +68,21 @@ namespace WaveTeam.UI
             {
                 _board.Remove(_placed);
             }
-            else if (e.button == PointerEventData.InputButton.Left && e.clickCount >= 2)
+            else if (e.button == PointerEventData.InputButton.Left && !e.dragging)
             {
-                _board.OpenDetail(_placed); // 左键双击：打开细节预览（加点/洗点）；单击留给拖拽
+                _board.SelectPlaced(_placed);
+                if (e.clickCount >= 2) _board.OpenDetail(_placed);
             }
+        }
+
+        public void OnPointerEnter(PointerEventData e)
+        {
+            if (!_dragging) _board.HoverPlaced(_placed, true);
+        }
+
+        public void OnPointerExit(PointerEventData e)
+        {
+            _board.HoverPlaced(_placed, false);
         }
     }
 }

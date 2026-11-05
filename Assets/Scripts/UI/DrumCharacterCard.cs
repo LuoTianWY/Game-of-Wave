@@ -24,8 +24,10 @@ namespace WaveTeam.UI
         public System.Action<DrumCharacterCard, Vector2> OnDragMove;
 
         private HexWaveformRenderer _waveform;
+        private MelodyContourRenderer _melodyContour;
         private AudioSource _source;
         private System.Action<DrumCharacter> _previewRhythm;
+        private bool _showTraits;
         private bool _dragging;
         private bool _hovering;
         private Vector2 _hoverBasePos;
@@ -41,13 +43,14 @@ namespace WaveTeam.UI
         public RectTransform Rect { get { return (RectTransform)transform; } }
 
         public static DrumCharacterCard Create(DrumCharacter character, Transform parent,
-                                               System.Action<DrumCharacter> previewRhythm = null)
+                                               System.Action<DrumCharacter> previewRhythm = null, bool showTraits = true)
         {
             var go = new GameObject("Card_" + character.Name, typeof(RectTransform), typeof(Image), typeof(DrumCharacterCard));
             go.transform.SetParent(parent, false);
             var card = go.GetComponent<DrumCharacterCard>();
             card.Character = character;
             card._previewRhythm = previewRhythm;
+            card._showTraits = showTraits;
             card.BuildVisual();
             return card;
         }
@@ -114,32 +117,47 @@ namespace WaveTeam.UI
                     new Vector2(60f, 70f), Vector2.zero);
             }
 
-            // 名字 + 性格名词（右侧），像素字
-            var label = UIFactory.PlacePixelText("Label", transform,
-                _previewRhythm == null ? Character.Name + " · " + Character.Noun : Character.Name, 1.5f,
-                UIStyle.Text, PixelText.Align.Left,
-                new Vector2(0f, 0f), new Vector2(90f, 50f));
-            label.raycastTarget = false;
-
-            // 玩法属性提示：帮助玩家理解角色为什么适合某种编排
-            var stats = RehearsalTraits.GetStats(Character.Noun);
-
-            string hintText = _previewRhythm == null
-                ? "稳 " + stats.Stability + "   密 " + stats.Density
-                : Character.Pattern.TotalBeats + " 拍";
-
-            var gameplayHint = UIFactory.PlacePixelText(
-                "GameplayHint",
-                transform,
-                hintText,
-                1.1f,
-                UIStyle.Text,
-                PixelText.Align.Left,
-                new Vector2(0f, 0f),
-                new Vector2(90f, 30f)
-            );
-
-            gameplayHint.raycastTarget = false;
+            if (Character.Kind != WaveKind.Rhythm)
+            {
+                _waveform.enabled = false;
+                var contourRect = UIFactory.CreateRect("MelodyContour", transform);
+                contourRect.anchorMin = new Vector2(0f, 0.64f);
+                contourRect.anchorMax = Vector2.one;
+                contourRect.offsetMin = new Vector2(8f, 6f);
+                contourRect.offsetMax = new Vector2(-8f, -6f);
+                _melodyContour = contourRect.gameObject.AddComponent<MelodyContourRenderer>();
+                _melodyContour.SetNotes(Character.MelodyNotes, Character.Pattern.TotalBeats);
+                _melodyContour.color = Character.Kind == WaveKind.Bass ? UIStyle.Ok : UIStyle.Accent;
+                _melodyContour.raycastTarget = false;
+                AddInfo("Label", Character.Name, 19, 70f);
+                AddInfo("WaveType", Character.Kind + " · " + Character.SoundLabel, 15, 51f);
+                var notes = new System.Text.StringBuilder();
+                foreach (var note in Character.MelodyNotes)
+                    notes.Append(MelodyNote.Name(note.MidiNote)).Append(" ");
+                AddInfo("NoteNames", notes.ToString().TrimEnd(), 14, 31f);
+                AddInfo("Duration", Character.Pattern.TotalBeats + " 拍", 15, 8f);
+            }
+            else if (_showTraits)
+            {
+                AddInfo("Label", Character.Name, 19, 70f);
+                AddInfo("Trait", Character.Noun + " · " + Character.Waveform.Name, 16, 51f);
+                var stats = RehearsalTraits.GetStats(Character.Noun);
+                AddInfo("GameplayHint",
+                    "稳定 " + stats.Stability + " / 层次 " + stats.Layering + " / 密度 " + stats.Density, 14, 31f);
+                var duration = AddInfo("Duration", Character.Pattern.TotalBeats + " 拍 · Rhythm", 14, 8f);
+                duration.rectTransform.sizeDelta = new Vector2(106f, 20f);
+                waveRt.anchorMin = new Vector2(0f, 0.64f);
+                waveRt.offsetMin = new Vector2(8f, 6f);
+            }
+            else
+            {
+                var label = UIFactory.PlacePixelText("Label", transform, Character.Name, 1.5f,
+                    UIStyle.Text, PixelText.Align.Left, new Vector2(0f, 0f), new Vector2(90f, 50f));
+                label.raycastTarget = false;
+                var hint = UIFactory.PlacePixelText("GameplayHint", transform, "Rhythm · " + Character.Pattern.TotalBeats + " 拍", 1.1f,
+                    UIStyle.Text, PixelText.Align.Left, new Vector2(0f, 0f), new Vector2(90f, 30f));
+                hint.raycastTarget = false;
+            }
 
             AddPlayButton();
 
@@ -149,6 +167,15 @@ namespace WaveTeam.UI
                 _source.spatialBlend = 0f;
                 _source.playOnAwake = false;
             }
+        }
+
+        private Text AddInfo(string name, string text, int fontSize, float y)
+        {
+            var label = UIFactory.CreateText(name, transform, text, fontSize, UIStyle.Text);
+            label.raycastTarget = false;
+            UIFactory.Place(label.rectTransform, new Vector2(0f, 0f),
+                new Vector2(180f, fontSize + 3f), new Vector2(90f, y));
+            return label;
         }
 
         private void AddPlayButton()
@@ -191,6 +218,11 @@ namespace WaveTeam.UI
         /// <summary>加点/洗点后刷新波形预览（角色共享，故订阅其 Changed 事件）。</summary>
         private void RefreshWaveform()
         {
+            if (_melodyContour != null)
+            {
+                _melodyContour.SetNotes(Character.MelodyNotes, Character.Pattern.TotalBeats);
+                return;
+            }
             if (_waveform != null && Character != null)
                 _waveform.SetPattern(Character.EffectivePattern, RhythmPattern.StableHash(Character.Name));
         }

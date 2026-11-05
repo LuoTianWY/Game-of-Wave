@@ -13,10 +13,10 @@ namespace WaveTeam.UI
         public const float PanelWidth = 320f;
         public const float TabWidth = 24f;
         private const float TabVisualWidth = 34f;   // 拉手实际宽度（比收起后的可见宽度略宽）
-        private const float ReferenceHeight = 1080f;
 
         private bool _expanded = true;
-        private Transform _cardsRoot;
+        private RectTransform _cardsRoot;
+        private ScrollRect _scroll;
         private Image _tabArrow;
         private Sprite _chevronRight;
         private Sprite _chevronLeft;
@@ -38,8 +38,10 @@ namespace WaveTeam.UI
 
         private void Build()
         {
-            Rect.anchorMin = Rect.anchorMax = Rect.pivot = new Vector2(1f, 0.5f);
-            Rect.sizeDelta = new Vector2(PanelWidth, ReferenceHeight);
+            Rect.anchorMin = new Vector2(1f, 0f);
+            Rect.anchorMax = new Vector2(1f, 1f);
+            Rect.pivot = new Vector2(1f, 0.5f);
+            Rect.sizeDelta = new Vector2(PanelWidth, 0f);
             Rect.anchoredPosition = Vector2.zero;
 
             var bg = GetComponent<Image>();
@@ -75,14 +77,22 @@ namespace WaveTeam.UI
             railRt.sizeDelta = new Vector2(3f, -HeaderHeight - 20f);
             railRt.anchoredPosition = new Vector2(TabWidth + 6f, -6f);
 
-            // 卡片容器（面板左起 TabWidth 处开始摆卡）
-            _cardsRoot = new GameObject("Cards", typeof(RectTransform)).transform;
-            _cardsRoot.SetParent(transform, false);
-            var cr = (RectTransform)_cardsRoot;
-            cr.anchorMin = Vector2.zero;
-            cr.anchorMax = Vector2.one;
-            cr.offsetMin = Vector2.zero;
-            cr.offsetMax = Vector2.zero;
+            var viewport = UIFactory.CreatePanel("CardViewport", transform, Color.clear).rectTransform;
+            UIFactory.Stretch(viewport);
+            viewport.offsetMin = new Vector2(0f, 8f);
+            viewport.offsetMax = new Vector2(0f, -HeaderHeight);
+            viewport.gameObject.AddComponent<RectMask2D>();
+            _cardsRoot = UIFactory.CreateRect("Cards", viewport);
+            _cardsRoot.anchorMin = new Vector2(0f, 1f);
+            _cardsRoot.anchorMax = Vector2.one;
+            _cardsRoot.pivot = new Vector2(0f, 1f);
+            _cardsRoot.anchoredPosition = Vector2.zero;
+            _scroll = viewport.gameObject.AddComponent<ScrollRect>();
+            _scroll.viewport = viewport;
+            _scroll.content = _cardsRoot;
+            _scroll.horizontal = false;
+            _scroll.movementType = ScrollRect.MovementType.Clamped;
+            _scroll.scrollSensitivity = 32f;
 
             BuildHeader();
             BuildTab();
@@ -194,14 +204,15 @@ namespace WaveTeam.UI
         }
 
         /// <summary>清空并重新陈列角色卡。</summary>
-        public void Populate(IReadOnlyList<DrumCharacter> characters, System.Action<DrumCharacter> previewRhythm = null)
+        public void Populate(IReadOnlyList<DrumCharacter> characters, System.Action<DrumCharacter> previewRhythm = null,
+                             bool showTraits = true)
         {
             ClearCards();
-            float y = -HeaderHeight - 14f;
+            float y = -14f;
             int index = 0;
             foreach (var c in characters)
             {
-                var card = DrumCharacterCard.Create(c, _cardsRoot, previewRhythm);
+                var card = DrumCharacterCard.Create(c, _cardsRoot, previewRhythm, showTraits);
                 _cards.Add(card);
                 var rt = card.Rect;
                 rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 1f);
@@ -229,6 +240,9 @@ namespace WaveTeam.UI
 
                 y -= DrumCharacterCard.Height + 10f;
             }
+            _cardsRoot.sizeDelta = new Vector2(0f, -y);
+            _scroll.StopMovement();
+            _scroll.verticalNormalizedPosition = 1f;
         }
 
         private void ClearCards()

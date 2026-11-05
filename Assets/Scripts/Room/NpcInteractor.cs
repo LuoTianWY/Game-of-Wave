@@ -23,6 +23,16 @@ namespace WaveTeam.Room
         private NpcActor _target;
         private bool _locked;
         private PlayerMovement _movement;
+        private Transform _equipment;
+        private Vector3 _equipmentOffset;
+        public System.Action OnEquipmentInteract;
+        public bool EquipmentNearby { get; private set; }
+
+        public void RegisterEquipment(Transform equipment, Vector3 offset)
+        {
+            _equipment = equipment;
+            _equipmentOffset = offset;
+        }
 
         /// <summary>当前被选中的目标（可能为 null）。</summary>
         public NpcActor Target { get { return _target; } }
@@ -44,6 +54,7 @@ namespace WaveTeam.Room
         public void SetLocked(bool locked)
         {
             _locked = locked;
+            if (locked) EquipmentNearby = false;
             if (locked) SetTarget(null);
             if (_movement != null) _movement.enabled = !locked;
         }
@@ -51,7 +62,17 @@ namespace WaveTeam.Room
         private void Update()
         {
             if (_locked) return;
-            SetTarget(FindNearestInRange());
+            var npc = FindNearestInRange();
+            float equipmentDistance = _equipment == null ? float.MaxValue
+                : Vector2.Distance(transform.position, _equipment.position + _equipmentOffset);
+            EquipmentNearby = equipmentDistance <= Radius &&
+                (npc == null || equipmentDistance < Vector2.Distance(transform.position, npc.Anchor));
+            SetTarget(EquipmentNearby ? null : npc);
+            if (EquipmentNearby && Input.GetKeyDown(KeyCode.F))
+            {
+                OnEquipmentInteract?.Invoke();
+                return;
+            }
             if (_target != null && Input.GetKeyDown(KeyCode.F))
             {
                 var profile = _target.Profile;

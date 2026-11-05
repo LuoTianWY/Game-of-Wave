@@ -10,15 +10,72 @@ namespace WaveTeam.Room
 {
     public static class RehearsalProgress
     {
-        private const string CompletionKey = "WaveTeam.Rehearsal.Completed.";
+        // 旧 Completed.Rehearsal1 也曾由普通通过写入，不能用于满分门槛。
+        private const string PerfectFirstKey = "WaveTeam.Rehearsal.Level1.Perfect";
+        private const string IntroductionKey = "WaveTeam.Rehearsal.MissingBeat.IntroductionSeen.V2";
+        private const string CurrentChallengeKey = "WaveTeam.Rehearsal.CurrentChallengeId";
+        private const string TalkedKey = "WaveTeam.Rehearsal.Talked.";
+        private const string FirstPassedKey = "WaveTeam.Rehearsal.Level1.Passed";
+        private const string ThirdIntroductionKey = "WaveTeam.Rehearsal.OurSound.IntroductionSeen";
+        private const string EndingKey = "WaveTeam.Rehearsal.OurFirstSong.EndingSeen";
         public const string MissingBeatWorkFile = "missing_beat_arrangement.json";
         public const string MissingBeatDraftFile = "missing_beat_draft.json";
+        public const string OurSoundDraftFile = "our_sound_draft.json";
+        private const string LibraryFile = "song_library.json";
 
-        public static bool IsFirstComplete => PlayerPrefs.GetInt(CompletionKey + RehearsalChallenge.First.Id) == 1;
+        public static bool IsFirstComplete => PlayerPrefs.GetInt(PerfectFirstKey) == 1;
+        public static bool Level2IntroductionSeen => PlayerPrefs.GetInt(IntroductionKey) == 1;
+        public static bool Level2Unlocked => IsFirstComplete && Level2IntroductionSeen;
+        public static bool Level2Completed => LoadCompletedMissingBeat() != null;
+        public static string CurrentChallengeId => PlayerPrefs.GetString(CurrentChallengeKey, RehearsalChallenge.First.Id);
+        public static bool FirstPassed => PlayerPrefs.GetInt(FirstPassedKey) == 1 || IsFirstComplete;
+        public static bool HasTalked(string name) => PlayerPrefs.GetInt(TalkedKey + name) == 1;
+        public static bool ReadyForFirst => HasTalked("阿宁") && HasTalked("小川") && HasTalked("石头");
+        public static bool ThirdIntroductionSeen => PlayerPrefs.GetInt(ThirdIntroductionKey) == 1;
+        public static bool Level3Unlocked => Level2Unlocked && Level2Completed && ThirdIntroductionSeen;
+        public static bool Level3Completed => LoadSongs().Count > 0;
+        public static bool EndingSeen => PlayerPrefs.GetInt(EndingKey) == 1;
 
-        public static void CompleteFirst()
+        internal static void CompleteEnding()
         {
-            PlayerPrefs.SetInt(CompletionKey + RehearsalChallenge.First.Id, 1);
+            if (!Level3Completed || EndingSeen) return;
+            PlayerPrefs.SetInt(EndingKey, 1);
+            PlayerPrefs.Save();
+        }
+
+        internal static void CompleteThirdIntroduction()
+        {
+            if (!Level2Unlocked || !Level2Completed || ThirdIntroductionSeen) return;
+            PlayerPrefs.SetInt(ThirdIntroductionKey, 1);
+            PlayerPrefs.Save();
+        }
+
+        internal static void RecordTalk(string name)
+        {
+            PlayerPrefs.SetInt(TalkedKey + name, 1);
+            PlayerPrefs.Save();
+        }
+
+        internal static void RecordFirstScore(int score)
+        {
+            if (score >= 66) PlayerPrefs.SetInt(FirstPassedKey, 1);
+            PlayerPrefs.Save();
+            if (score != 100 || IsFirstComplete) return;
+            PlayerPrefs.SetInt(PerfectFirstKey, 1);
+            PlayerPrefs.Save();
+        }
+
+        internal static void CompleteIntroduction()
+        {
+            if (!IsFirstComplete || Level2IntroductionSeen) return;
+            PlayerPrefs.SetInt(IntroductionKey, 1);
+            PlayerPrefs.Save();
+        }
+
+        internal static void SelectChallenge(string id)
+        {
+            if (CurrentChallengeId == id) return;
+            PlayerPrefs.SetString(CurrentChallengeKey, id);
             PlayerPrefs.Save();
         }
 
@@ -32,7 +89,7 @@ namespace WaveTeam.Room
         {
             get
             {
-                return LoadCompletedMissingBeat()?.unlockedChallengeId == RehearsalChallenge.NextChallengeId;
+                return Level3Unlocked;
             }
         }
 
@@ -43,7 +100,8 @@ namespace WaveTeam.Room
             try
             {
                 var data = JsonUtility.FromJson<BoardSaveData>(File.ReadAllText(path));
-                if (data?.challengeId == RehearsalChallenge.MissingBeatId &&
+                if (data != null && (data.challengeId == RehearsalChallenge.MissingBeatId ||
+                    data.challengeId == RehearsalChallenge.First.Id || data.challengeId == RehearsalChallenge.NextChallengeId) &&
                     data.trackLengthBeats == DrumTrackBoard.TrackLengthBeats && data.drums != null)
                     return data;
                 Debug.LogWarning("[波形小队] 编排存档格式不匹配：" + path);
@@ -55,7 +113,7 @@ namespace WaveTeam.Room
             return null;
         }
 
-        internal static bool TryWrite(string fileName, BoardSaveData data, out string path)
+        internal static bool TryWrite<T>(string fileName, T data, out string path)
         {
             path = Path.Combine(Application.persistentDataPath, fileName);
             string temporary = path + ".tmp";
@@ -74,9 +132,46 @@ namespace WaveTeam.Room
             }
         }
 
-        internal static void RestoreEdits(DrumTrackBoard board, BoardSaveData data, IReadOnlyList<DrumSample> samples)
+        public static IReadOnlyList<BoardSaveData> LoadSongs()
         {
-            if (data == null) return;
+            if (!TryReadLibrary(out var library)) return Array.Empty<BoardSaveData>();
+            return library.works.FindAll(work => work != null &&
+                work.challengeId == RehearsalChallenge.NextChallengeId && work.challengeCompleted && work.drums != null);
+        }
+
+        private static bool TryReadLibrary(out SongLibraryData library)
+        {
+            library = new SongLibraryData();
+            string path = Path.Combine(Application.persistentDataPath, LibraryFile);
+            if (!File.Exists(path)) return true;
+            try
+            {
+                library = JsonUtility.FromJson<SongLibraryData>(File.ReadAllText(path));
+                return library?.works != null;
+            }
+            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is ArgumentException)
+            {
+                Debug.LogWarning("[波形小队] 曲库读取失败：" + e.Message);
+                return false;
+            }
+        }
+
+        internal static bool SaveSong(BoardSaveData work, string name)
+        {
+            if (!work.challengeCompleted || work.challengeId != RehearsalChallenge.NextChallengeId ||
+                string.IsNullOrWhiteSpace(name) || !TryReadLibrary(out var library)) return false;
+            work.songName = name.Trim().Replace("\n", " ").Replace("\r", " ");
+            if (work.songName.Length > 48) work.songName = work.songName.Substring(0, 48);
+            work.songId = Guid.NewGuid().ToString("N");
+            work.createdAtUtc = DateTime.UtcNow.ToString("O");
+            library.works.Add(work);
+            return TryWrite(LibraryFile, library, out _);
+        }
+
+        internal static bool RestoreEdits(DrumTrackBoard board, BoardSaveData data, IReadOnlyList<DrumSample> samples)
+        {
+            if (data == null) return true;
+            bool restored = true;
             var seams = new List<PlacedDrum>();
             foreach (var entry in data.drums)
             {
@@ -85,17 +180,30 @@ namespace WaveTeam.Room
                     board.RestoreEditable(character, entry.startBeat, entry.LaneIndex) is not PlacedDrum clip)
                 {
                     Debug.LogWarning("[波形小队] 跳过无法恢复的编排片段。");
+                    restored = false;
                     continue;
                 }
                 if (entry.connectedToNext) seams.Add(clip);
             }
             foreach (var clip in seams) board.RestoreConnection(clip);
+            return restored;
         }
 
-        private static bool TryRestoreCharacter(PlacedDrumEntry entry, IReadOnlyList<DrumSample> samples,
+        internal static bool TryRestoreCharacter(PlacedDrumEntry entry, IReadOnlyList<DrumSample> samples,
                                                 out DrumCharacter character)
         {
             character = null;
+            if (!Enum.IsDefined(typeof(WaveKind), entry.waveKind)) return false;
+            if (entry.waveKind != WaveKind.Rhythm)
+            {
+                try
+                {
+                    character = new DrumCharacter(entry.characterName, entry.waveKind, entry.instrumentId,
+                        entry.melodyNotes, entry.durationBeats);
+                    return true;
+                }
+                catch (ArgumentException) { return false; }
+            }
             if (!(entry.durationBeats > 0f && entry.durationBeats <= DrumTrackBoard.TrackLengthBeats) ||
                 string.IsNullOrEmpty(entry.characterName) || entry.rhythmPoints == null || entry.rhythmPoints.Length == 0 ||
                 !Enum.IsDefined(typeof(HexCategory), entry.category))
